@@ -1,0 +1,3 @@
+cryptography
+google-generativeai
+pyinstaller
