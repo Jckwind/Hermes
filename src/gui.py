@@ -1,7 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog
 from pathlib import Path
+import zipfile
 from text_collector import TextCollector
+from components.toolbar import Toolbar
 
 class iMessageViewer(tk.Tk):
     def __init__(self, db_path):
@@ -46,6 +48,34 @@ class iMessageViewer(tk.Tk):
 
         # Configure Listbox for easier selection
         self.chat_list.configure(exportselection=False)
+        self.create_toolbar()
+
+    def create_toolbar(self):
+        toolbar = Toolbar(self)
+
+        toolbar.add_button("Export All", self.export_all_conversations)
+        toolbar.add_button("Export My Texts", self.export_my_texts)
+
+    def export_all_conversations(self):
+        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile="all_conversations.zip")
+        if zip_path:
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for chat_id, _, _ in self.chats:
+                    messages = self.collector.read_messages(chat_id)
+                    export_text = self.format_messages_for_export(messages)
+                    zipf.writestr(f"{chat_id}.txt", export_text)
+            messagebox.showinfo("Conversations Exported", f"All conversations exported to {zip_path}")
+
+    def export_my_texts(self):
+        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile="my_texts.zip")
+        if zip_path:
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for chat_id, _, _ in self.chats:
+                    messages = self.collector.read_messages(chat_id)
+                    my_texts = [msg for msg in messages if msg['phone_number'] == 'Jack']
+                    export_text = self.format_messages_for_export(my_texts)
+                    zipf.writestr(f"{chat_id}_my_texts.txt", export_text)
+            messagebox.showinfo("My Texts Exported", f"All your texts exported to {zip_path}")
 
     def export_conversation(self):
         selection = self.chat_list.curselection()
@@ -56,21 +86,26 @@ class iMessageViewer(tk.Tk):
         chat_id, chat_name, chat_identifier = self.chats[index]
         messages = self.collector.read_messages(chat_id)
 
-        # Create formatted text for export
+        export_text = self.format_messages_for_export(messages)
+
+        default_filename = f"{chat_name or chat_identifier}.txt"
+        file_path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile=default_filename)
+        if file_path:
+            self.save_messages_to_file(file_path, export_text)
+            messagebox.showinfo("Conversation Exported", f"Conversation saved to {file_path}")
+
+    def format_messages_for_export(self, messages):
         export_text = ""
         for message in messages:
             sender = message['phone_number']
             content = message['body']
             time_sent = message['date']
             export_text += f"{sender}: {content} ({time_sent})\n"
+        return export_text
 
-        # Save file dialog
-        file_path = filedialog.asksaveasfilename(defaultextension=".txt", 
-                                                initialfile=f"{chat_name}.txt")
-        if file_path:
-            with open(file_path, 'w') as f:
-                f.write(export_text)
-            messagebox.showinfo("Conversation Exported", f"Conversation saved to {file_path}")
+    def save_messages_to_file(self, file_path, export_text):
+        with open(file_path, 'w') as f:
+            f.write(export_text)
 
     def filter_chats(self, event=None):
         """Filters the chat list based on search input."""
@@ -130,8 +165,8 @@ class iMessageViewer(tk.Tk):
     def save_conversation(self, chat_name, messages):
         """Saves the conversation to a .txt file with a timestamp to differentiate versions."""
         from datetime import datetime
-        timestamp = datetime.now().strftime("%Y%m%d%H%M")
-        filename = f"{chat_name}_{timestamp}.txt"
+        timestamp = datetime.now().strftime("%m-%Y_%H-M")
+        filename = f"{chat_name}_{timestamp}.dump.txt"
         with open(filename, 'w') as f:
             f.writelines(messages)
         messagebox.showinfo("Conversation Saved", f"Conversation saved to {filename}")
