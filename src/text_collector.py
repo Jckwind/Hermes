@@ -2,6 +2,7 @@ import sqlite3
 import datetime
 import json
 from typing import List, Dict, Union
+from glob import glob
 
 class TextCollector:
     def __init__(self, db_path: str):
@@ -19,7 +20,9 @@ class TextCollector:
     def get_all_chat_ids_with_labels(self) -> List[tuple]:
         cursor = self.conn.cursor()
         cursor.execute("""
-            SELECT cmj.chat_id, c.display_name, c.chat_identifier
+            SELECT cmj.chat_id, 
+                   COALESCE(c.display_name, c.chat_identifier) AS display_name, 
+                   c.chat_identifier
             FROM chat_message_join AS cmj
             JOIN message AS m ON cmj.message_id = m.ROWID
             INNER JOIN chat AS c ON cmj.chat_id = c.ROWID
@@ -27,18 +30,62 @@ class TextCollector:
             ORDER BY MAX(m.date) DESC;
         """)
         chats = cursor.fetchall()
-        chats = [chat for chat in chats if chat[1] or chat[2]]
         cursor.close()
-        return chats
+
+        # Load contacts to map phone numbers to names
+        contacts = self.load_contacts()
+
+        # Enrich chats with contact names where display_name is a phone number
+        enriched_chats = []
+        for chat_id, display_name, chat_identifier in chats:
+            if display_name in contacts:  # Check if display name is actually a phone number found in contacts
+                display_name = contacts[display_name]
+            enriched_chats.append((chat_id, display_name, chat_identifier))
+
+        return enriched_chats
+
+
 
     def load_contacts(self) -> Dict[str, str]:
+        
         try:
-            with open("contacts.json", "r") as f:
-                return json.load(f)
-        except FileNotFoundError:
+            # Adjust the path to your specific setup
+            path_pattern = '/Users/*/Library/Application Support/AddressBook/Sources/*/AddressBook-v22.abcddb'
+            database_paths = glob(path_pattern)
+            
+            if not database_paths:
+                print("No AddressBook database found.")
+                return {}
+            
+            database_path = database_paths[0]
+           
+            conn = sqlite3.connect(database_path)
+            cursor = conn.cursor()
+           
+            query = '''
+            SELECT p.ZFULLNUMBER, 
+                   TRIM(COALESCE(r.ZFIRSTNAME || ' ' || NULLIF(r.ZLASTNAME, ''), r.ZFIRSTNAME, r.ZLASTNAME)) AS FullName
+            FROM ZABCDPHONENUMBER p
+            JOIN ZABCDRECORD r ON p.ZOWNER = r.Z_PK
+            ORDER BY r.ZLASTNAME ASC, r.ZFIRSTNAME ASC
+            '''
+            cursor.execute(query)
+            contacts_data = cursor.fetchall()
+            contacts = {str(phone): name for phone, name in contacts_data}
+            
+
+            # Close connection
+            cursor.close()
+            conn.close()
+            
+
+            return contacts
+        except sqlite3.Error as e:
             return {}
 
-    def read_messages(self, chat_id: int, self_number='Jack', human_readable_date=True) -> List[Dict[str, str]]:
+
+
+    def read_messages(self, chat_id: int, self_number='Jac', human_readable_date=True) -> List[Dict[str, str]]:
         cursor = self.conn.cursor()
         query = """
         SELECT message.ROWID, message.date, message.text, message.attributedBody, handle.id, message.is_from_me, message.cache_has_attachments 
