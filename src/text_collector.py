@@ -3,6 +3,7 @@ import datetime
 import json
 from typing import List, Dict, Union
 from glob import glob
+import re  # Add this import at the top of your file if not already present
 
 class TextCollector:
     def __init__(self, db_path: str):
@@ -38,8 +39,10 @@ class TextCollector:
         # Enrich chats with contact names where display_name is a phone number
         enriched_chats = []
         for chat_id, display_name, chat_identifier in chats:
-            if display_name in contacts:  # Check if display name is actually a phone number found in contacts
-                display_name = contacts[display_name]
+            # Normalize display_name for comparison
+        
+            if display_name == '' and chat_identifier in contacts:
+                display_name = contacts[chat_identifier]
             enriched_chats.append((chat_id, display_name, chat_identifier))
 
         return enriched_chats
@@ -71,7 +74,12 @@ class TextCollector:
             '''
             cursor.execute(query)
             contacts_data = cursor.fetchall()
-            contacts = {str(phone): name for phone, name in contacts_data}
+            
+            contacts = {
+                '+1' + re.sub(r'[^\d]', '', str(phone))[-10:]: name 
+                for phone, name in contacts_data
+            }
+            print(contacts)
             
 
             # Close connection
