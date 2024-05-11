@@ -73,13 +73,26 @@ Conda is an open-source package management and environment management system. It
    cd Hermes
    ```
 
+
+
 3. Install required Python packages:
    ```
    pip install -r requirements.txt
    ```
 
+
+4. Before Running the Application 
+    To ensure the Cursor IDE functions correctly, it requires Full Disk Access. This access allows the program to retrieve data from your iMessages. Please follow these steps to grant the necessary permissions:
+
+        - Open the Settings app from your applications folder.
+        - Navigate to Privacy and Security.
+        - Scroll to Full Disk Access and click to open it.
+        - Locate the Cursor IDE in the list and check the box to grant it permission.
+
+
 ## Usage
 Run the `gui.py` from the src directory:
+
 ```
 python src/gui.py
 ```
