@@ -26,7 +26,7 @@ Conda is an open-source package management and environment management system. It
    python3 --version
    ```
 
-4. **Set Up Python Environment**:
+4. **Set Up Python Environment** (Optional):
    If you need to manage multiple Python environments, you can install `pyenv` using Homebrew:
    ```
    brew install pyenv

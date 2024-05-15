@@ -78,9 +78,7 @@ class TextCollector:
             contacts = {
                 '+1' + re.sub(r'[^\d]', '', str(phone))[-10:]: name 
                 for phone, name in contacts_data
-            }
-            print(contacts)
-            
+            }            
 
             # Close connection
             cursor.close()
