@@ -6,54 +6,68 @@ Hermes is a tool designed to securely extract and view iMessages from macOS devi
 ## Installation
 Conda is an open-source package management and environment management system. It functions like a library, where you can easily access and manage collections of books (or in this case, software packages) without conflicts.
 
-### Installing Conda and Setting Up the Environment
+### Installing Python with Homebrew
 
-1. **Install Conda**: 
-   If you do not have Conda installed, run this line in your terminal:
+1. **Install Homebrew**: 
+   If you do not have Homebrew installed, run this line in your terminal:
    ```
-   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
-   ```
-
-2. **Give Proper Permissions and Execute the Script**: 
-   Run these commands to give the correct permissions and execute the script:
-   ```
-   chmod +x Miniconda3-latest-Linux-x86_64.sh
-   ./Miniconda3-latest-Linux-x86_64.sh
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
 
-3. **Follow The Installation Prompts**: 
-   The installer will prompt you to review the license agreement. Keep pressing Enter to scroll through the agreement. Type 'yes' to agree to the terms and continue with the installation. After the installation, close and reopen your terminal.
+2. **Install Python**:
+   Once Homebrew is installed, you can install Python by running:
+   ```
+   brew install python
+   ```
 
-4. **Initialize Conda for zsh**: 
-   Open the `.zshrc` file by typing the following command into your terminal:
+3. **Verify Python Installation**:
+   After installation, you can verify that Python is installed correctly by checking its version:
    ```
-   nano ~/.zshrc
+   python3 --version
    ```
-   Add the following line to the end of the file:
+
+4. **Set Up Python Environment**:
+   If you need to manage multiple Python environments, you can install `pyenv` using Homebrew:
    ```
-   export PATH="/Users/gibbsgresge/miniconda3/bin:$PATH"
+   brew install pyenv
+   ```
+   Then you can create a new environment, for example with Python 3.9:
+   ```
+   pyenv install 3.9.1
+   pyenv global 3.9.1
+   ```
+
+5. **Update PATH**:
+   Ensure that the Homebrew Python version is used when you run `python` commands by adding the following line to your `.zshrc` file:
+   ```
+   export PATH="/usr/local/opt/python/libexec/bin:$PATH"
    ```
    Save and close the file. Then, source the `.zshrc` file to update your environment:
    ```
    source ~/.zshrc
    ```
-   Initialize Conda:
-   ```
-   conda init zsh
-   ```
 
-5. **Create a Conda Environment**:
-   Open your terminal and type the following command to create a new environment named `hermes_env` with Python 3.9:
+6. **Verify Python Environment**:
+   Check that the correct version of Python is being used:
    ```
-   conda create --name hermes_env python=3.9
+   python --version
    ```
+   This should reflect the version installed via Homebrew or `pyenv`.
 
-6. **Activate the Environment**:
-   Activate the newly created environment by running:
-   ```
-   conda activate hermes_env
-   ```
-   After activation, you should see `(hermes_env)` in your terminal prompt, indicating that you are currently working within the `hermes_env` environment.
+7. **Run `run.sh`**:
+   To execute the `run.sh` script, which will install required Python packages and run the GUI application, follow these steps:
+
+   - First, ensure that the script has execute permissions. Run the following command in your terminal:
+     ```
+     chmod +x run.sh
+     ```
+
+   - Now, you can run the script using the Python installed by Homebrew. Execute the script by typing:
+     ```
+     ./run.sh
+     ```
+
+   This will install all necessary Python packages specified in `requirements.txt` and then start the GUI application using the Python version installed via Homebrew.
 
 ## Features
 - **GUI Viewer**: View messages through a user-friendly interface.
