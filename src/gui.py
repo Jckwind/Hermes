@@ -160,7 +160,7 @@ class iMessageViewer(tk.Tk):
         """Loads chats ordered by recent activity and updates listbox with contact name or chat ID."""
         self.chat_list.delete(0, tk.END)  
         self.chats = self.collector.get_all_chat_ids_with_labels()
-        print(self.chats)
+    
         self.filter_chats()  # Apply filtering after loading
 
     def display_messages(self, event):

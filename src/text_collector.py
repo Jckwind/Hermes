@@ -39,8 +39,6 @@ class TextCollector:
         # Enrich chats with contact names where display_name is a phone number
         enriched_chats = []
         for chat_id, display_name, chat_identifier in chats:
-            # Normalize display_name for comparison
-        
             if display_name == '' and chat_identifier in contacts:
                 display_name = contacts[chat_identifier]
             enriched_chats.append((chat_id, display_name, chat_identifier))
