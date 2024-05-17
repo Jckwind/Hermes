@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog
+from tkinter import messagebox, filedialog, font  # Import font module
 from pathlib import Path
 import zipfile
 from text_collector import TextCollector
@@ -11,6 +11,9 @@ class iMessageViewer(tk.Tk):
         super().__init__()
         self.title('Hermes iMessage Viewer')
         self.geometry('1000x600')
+
+        # Set up the font
+        self.custom_font = font.Font(family="Times New Roman", size=12)  # Define the font
 
         self.collector = TextCollector(db_path)
         if not self.collector.conn:
@@ -33,7 +36,8 @@ class iMessageViewer(tk.Tk):
         self.connect_button = tk.Button(self.top_bar, text="Connect", command=self.load_chats)
         self.connect_button.pack(side=tk.LEFT)
 
-        self.search_bar = tk.Entry(self.top_bar)
+        # Entry and Listbox widgets use the custom font
+        self.search_bar = tk.Entry(self.top_bar, font=self.custom_font)
         self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_bar.bind("<KeyRelease>", self.filter_chats)
 
@@ -48,16 +52,16 @@ class iMessageViewer(tk.Tk):
         self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         self.paned_window.pack(fill=tk.BOTH, expand=1)
 
-        # Define the chat list
-        self.chat_list = tk.Listbox(self, width=50, height=2)
+        # Chat list and links list use the custom font
+        self.chat_list = tk.Listbox(self, width=50, height=2, font=self.custom_font)
         self.chat_list.bind('<<ListboxSelect>>', self.display_messages)
 
         # Define the message text area
-        self.message_text = tk.Text(self, wrap=tk.WORD)
+        self.message_text = tk.Text(self, wrap=tk.WORD, font=self.custom_font)  # Apply the font here
 
         # Define the links list frame
         self.links_frame = tk.Frame(self, width=300)  # Set a fixed width for the links frame
-        self.links_list = tk.Listbox(self.links_frame, width=1, height=10)  # Width=1 because width is controlled by frame
+        self.links_list = tk.Listbox(self.links_frame, width=1, height=10, font=self.custom_font)  # Width=1 because width is controlled by frame
         self.links_list.pack(fill=tk.BOTH, expand=True)
 
         # Add widgets to the paned window
@@ -179,15 +183,15 @@ class iMessageViewer(tk.Tk):
             sender = message['phone_number']
             content = message['body']
             time_sent = message['date']
-            links.update(url_pattern.findall(content))
+            message_links = url_pattern.findall(content)
+            links.update(message_links)
 
-            for link in links:
-                link_info = f"{sender} ({time_sent}): {link}"
-                self.links_list.insert(tk.END, link_info)
-                self.links_list.insert(tk.END, "")  # Add an empty line for spacing
+            # Display message in the main text widget with an extra newline for spacing
+            self.message_text.insert(tk.END, f"{sender}: {content} ({time_sent})\n\n")
 
-            # Display message in the main text widget
-            self.message_text.insert(tk.END, f"{sender}: {content} ({time_sent})\n")
+        # Add links to the links list
+        for link in links:
+            self.links_list.insert(tk.END, link)
 
         self.message_text.configure(state=tk.DISABLED)
 
