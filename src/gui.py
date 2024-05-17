@@ -5,6 +5,7 @@ import zipfile
 from text_collector import TextCollector
 from components.toolbar import Toolbar
 import re  # Add this at the beginning of the file if not already present
+import webbrowser  # Import this at the beginning of your file
 
 class iMessageViewer(tk.Tk):
     def __init__(self, db_path):
@@ -61,8 +62,10 @@ class iMessageViewer(tk.Tk):
 
         # Define the links list frame
         self.links_frame = tk.Frame(self, width=300)  # Set a fixed width for the links frame
-        self.links_list = tk.Listbox(self.links_frame, width=1, height=10, font=self.custom_font)  # Width=1 because width is controlled by frame
-        self.links_list.pack(fill=tk.BOTH, expand=True)
+        self.links_text = tk.Text(self.links_frame, width=1, height=10, font=self.custom_font, cursor="arrow")
+        self.links_text.tag_configure("link", foreground="blue", underline=True)
+        self.links_text.bind("<Button-1>", self.click_link)
+        self.links_text.pack(fill=tk.BOTH, expand=True)
 
         # Add widgets to the paned window
         self.paned_window.add(self.chat_list, minsize=200)
@@ -175,7 +178,8 @@ class iMessageViewer(tk.Tk):
         self.message_text.configure(state=tk.NORMAL)
         self.message_text.delete('1.0', tk.END)
 
-        self.links_list.delete(0, tk.END)  # Clear previous links
+        self.links_text.configure(state=tk.NORMAL)
+        self.links_text.delete('1.0', tk.END)  # Clear previous links
         url_pattern = re.compile(r'https?://\S+')
         links = set()  # Use a set to avoid duplicate links
 
@@ -191,9 +195,10 @@ class iMessageViewer(tk.Tk):
 
         # Add links to the links list
         for link in links:
-            self.links_list.insert(tk.END, link)
+            self.links_text.insert(tk.END, link + "\n\n", "link")  # Two newlines for separation
 
         self.message_text.configure(state=tk.DISABLED)
+        self.links_text.configure(state=tk.DISABLED)
 
     def export_links(self):
         selection = self.chat_list.curselection()
@@ -220,6 +225,15 @@ class iMessageViewer(tk.Tk):
                     messagebox.showinfo("No Links Found", "No links found in the selected chat.")
 
             messagebox.showinfo("Links Exported", f"Links from {chat_name or chat_identifier} exported to {zip_path}")
+
+    def click_link(self, event):
+        """Open the link if clicked."""
+        x, y = event.x, event.y
+        index = self.links_text.index(f"@{x},{y}")
+        tag_indices = self.links_text.tag_prevrange("link", index)
+        if tag_indices:
+            link = self.links_text.get(*tag_indices)
+            webbrowser.open(link.strip())  # Strip newline or extra spaces
 
 if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
