@@ -91,7 +91,7 @@ class TextCollector:
 
 
 
-    def read_messages(self, chat_id: int, self_number='Jac', human_readable_date=True) -> List[Dict[str, str]]:
+    def read_messages(self, chat_id: int, self_number='Me', human_readable_date=True) -> List[Dict[str, str]]:
         cursor = self.conn.cursor()
         query = """
         SELECT message.ROWID, message.date, message.text, message.attributedBody, handle.id, message.is_from_me, message.cache_has_attachments 

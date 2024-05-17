@@ -4,6 +4,7 @@ from pathlib import Path
 import zipfile
 from text_collector import TextCollector
 from components.toolbar import Toolbar
+import re  # Add this at the beginning of the file if not already present
 
 class iMessageViewer(tk.Tk):
     def __init__(self, db_path):
@@ -25,6 +26,10 @@ class iMessageViewer(tk.Tk):
         self.top_bar = tk.Frame(self)
         self.top_bar.pack(fill=tk.X)
 
+        # Move the Export button to the top left
+        self.export_button = tk.Button(self.top_bar, text="Export", command=self.export_conversation)
+        self.export_button.pack(side=tk.LEFT)
+
         self.connect_button = tk.Button(self.top_bar, text="Connect", command=self.load_chats)
         self.connect_button.pack(side=tk.LEFT)
 
@@ -32,23 +37,51 @@ class iMessageViewer(tk.Tk):
         self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_bar.bind("<KeyRelease>", self.filter_chats)
 
+        # New button for exporting links
+        self.export_links_button = tk.Button(self.top_bar, text="Export Links", command=self.export_links)
+        self.export_links_button.pack(side=tk.LEFT)
+
+        self.links_button = tk.Button(self.top_bar, text="Links", command=self.toggle_links)
+        self.links_button.pack(side=tk.RIGHT)
+
         # Main Content
-        self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL)
+        self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         self.paned_window.pack(fill=tk.BOTH, expand=1)
 
+        # Define the chat list
         self.chat_list = tk.Listbox(self, width=50, height=2)
         self.chat_list.bind('<<ListboxSelect>>', self.display_messages)
-        self.paned_window.add(self.chat_list)
 
+        # Define the message text area
         self.message_text = tk.Text(self, wrap=tk.WORD)
-        self.paned_window.add(self.message_text)
 
-        self.export_button = tk.Button(self.top_bar, text="Export", command=self.export_conversation)
-        self.export_button.pack(side=tk.LEFT)
+        # Define the links list frame
+        self.links_frame = tk.Frame(self, width=300)  # Set a fixed width for the links frame
+        self.links_list = tk.Listbox(self.links_frame, width=1, height=10)  # Width=1 because width is controlled by frame
+        self.links_list.pack(fill=tk.BOTH, expand=True)
 
-        # Configure Listbox for easier selection
-        self.chat_list.configure(exportselection=False)
+        # Add widgets to the paned window
+        self.paned_window.add(self.chat_list, minsize=200)
+        self.paned_window.add(self.message_text, minsize=400)
+        self.paned_window.add(self.links_frame, minsize=300)
+
+        # Initially hide the links frame
+        self.paned_window.forget(self.links_frame)
+
         self.create_toolbar()
+
+    def toggle_links(self):
+        if self.links_frame.winfo_ismapped():
+            self.paned_window.forget(self.links_frame)
+            # Increase the minsize of other panes if necessary
+            self.paned_window.paneconfigure(self.chat_list, minsize=250)
+            self.paned_window.paneconfigure(self.message_text, minsize=550)
+        else:
+            self.paned_window.add(self.links_frame)
+            # Adjust back when links are shown
+            self.paned_window.paneconfigure(self.chat_list, minsize=200)
+            self.paned_window.paneconfigure(self.message_text, minsize=400)
+            self.paned_window.paneconfigure(self.links_frame, minsize=300)
 
     def create_toolbar(self):
         toolbar = Toolbar(self)
@@ -135,42 +168,54 @@ class iMessageViewer(tk.Tk):
         chat_id, chat_name, chat_identifier = self.chats[index]
         messages = self.collector.read_messages(chat_id)
 
-        self.message_text.configure(state=tk.NORMAL)  # Make the Text widget editable
+        self.message_text.configure(state=tk.NORMAL)
         self.message_text.delete('1.0', tk.END)
 
-        # Improved formatting with tags for sender and time
-        if chat_name == "":
-            self.message_text.insert(tk.END, f"chat id: {chat_identifier}\n")  
-        else:
-            self.message_text.insert(tk.END, f"{chat_name}\n")  
+        self.links_list.delete(0, tk.END)  # Clear previous links
+        url_pattern = re.compile(r'https?://\S+')
+        links = set()  # Use a set to avoid duplicate links
+
         for message in messages:
             sender = message['phone_number']
             content = message['body']
             time_sent = message['date']
+            links.update(url_pattern.findall(content))
 
-            # Add sender with bold tag
-            self.message_text.insert(tk.END, f"{sender}: ", 'sender')  
-            
-            # Add content 
-            self.message_text.insert(tk.END, f"{content}\n", 'body')
+            for link in links:
+                link_info = f"{sender} ({time_sent}): {link}"
+                self.links_list.insert(tk.END, link_info)
+                self.links_list.insert(tk.END, "")  # Add an empty line for spacing
 
-            # Add time sent with gray tag on a new line
-            self.message_text.insert(tk.END, f"\t{time_sent}\n", 'time')  
+            # Display message in the main text widget
+            self.message_text.insert(tk.END, f"{sender}: {content} ({time_sent})\n")
 
-        self.message_text.configure(state=tk.DISABLED)  # Make the Text widget read-only
+        self.message_text.configure(state=tk.DISABLED)
 
-        # Define tags for styling 
-        self.message_text.tag_config('body', font=('Arial', 15, 'bold'))
-        self.message_text.tag_config('time', foreground='gray', font=('Arial', 10, 'italic'))
+    def export_links(self):
+        selection = self.chat_list.curselection()
+        if not selection:
+            messagebox.showerror("Selection Error", "No chat selected.")
+            return
 
-    def save_conversation(self, chat_name, messages):
-        """Saves the conversation to a .txt file with a timestamp to differentiate versions."""
-        from datetime import datetime
-        timestamp = datetime.now().strftime("%m-%Y_%H-M")
-        filename = f"{chat_name}_{timestamp}.dump.txt"
-        with open(filename, 'w') as f:
-            f.writelines(messages)
-        messagebox.showinfo("Conversation Saved", f"Conversation saved to {filename}")
+        index = selection[0]
+        chat_id, chat_name, chat_identifier = self.chats[index]
+
+        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile=f"{chat_name or chat_identifier}_links.zip")
+        if zip_path:
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                messages = self.collector.read_messages(chat_id)
+                links = []
+                url_pattern = re.compile(r'https?://\S+')
+                for message in messages:
+                    links.extend(url_pattern.findall(message['body']))
+
+                if links:
+                    export_text = '\n'.join(set(links))  # Use set to remove duplicates
+                    zipf.writestr(f"{chat_id}_links.txt", export_text)
+                else:
+                    messagebox.showinfo("No Links Found", "No links found in the selected chat.")
+
+            messagebox.showinfo("Links Exported", f"Links from {chat_name or chat_identifier} exported to {zip_path}")
 
 if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
