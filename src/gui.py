@@ -1,11 +1,11 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog, font  # Import font module
+from tkinter import messagebox, filedialog, font  
 from pathlib import Path
 import zipfile
 from text_collector import TextCollector
 from components.toolbar import Toolbar
-import re  # Add this at the beginning of the file if not already present
-import webbrowser  # Import this at the beginning of your file
+import re  
+import webbrowser  
 
 class iMessageViewer(tk.Tk):
     def __init__(self, db_path):
@@ -64,7 +64,6 @@ class iMessageViewer(tk.Tk):
         self.links_frame = tk.Frame(self, width=300)  # Set a fixed width for the links frame
         self.links_text = tk.Text(self.links_frame, width=1, height=10, font=self.custom_font, cursor="arrow")
         self.links_text.tag_configure("link", foreground="blue", underline=True)
-        self.links_text.bind("<Button-1>", self.click_link)
         self.links_text.pack(fill=tk.BOTH, expand=True)
 
         # Add widgets to the paned window
@@ -195,10 +194,19 @@ class iMessageViewer(tk.Tk):
 
         # Add links to the links list
         for link in links:
+            print(f"Adding link: {link}")  # Debugging print
+            start_index = self.links_text.index(tk.END)
             self.links_text.insert(tk.END, link + "\n\n", "link")  # Two newlines for separation
+            end_index = self.links_text.index(tk.END)
+            self.links_text.tag_add(link, start_index, end_index)
+            self.links_text.tag_bind(link, "<Button-1>", lambda e, url=link: self.click_link(url))
 
         self.message_text.configure(state=tk.DISABLED)
         self.links_text.configure(state=tk.DISABLED)
+
+    def click_link(self, url):
+        """Open the link if clicked."""
+        webbrowser.open(url)
 
     def export_links(self):
         selection = self.chat_list.curselection()
@@ -225,15 +233,6 @@ class iMessageViewer(tk.Tk):
                     messagebox.showinfo("No Links Found", "No links found in the selected chat.")
 
             messagebox.showinfo("Links Exported", f"Links from {chat_name or chat_identifier} exported to {zip_path}")
-
-    def click_link(self, event):
-        """Open the link if clicked."""
-        x, y = event.x, event.y
-        index = self.links_text.index(f"@{x},{y}")
-        tag_indices = self.links_text.tag_prevrange("link", index)
-        if tag_indices:
-            link = self.links_text.get(*tag_indices)
-            webbrowser.open(link.strip())  # Strip newline or extra spaces
 
 if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
