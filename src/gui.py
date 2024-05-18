@@ -41,7 +41,12 @@ class iMessageViewer(tk.Tk):
         self.search_bar = tk.Entry(self.top_bar, font=self.custom_font)
         self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_bar.bind("<KeyRelease>", self.filter_chats)
-
+        
+        
+        
+        self.search_bar_links = tk.Entry(self.top_bar, font=self.custom_font)
+        self.search_bar_links.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.search_bar_links.bind("<KeyRelease>", self.filter_links)
         # New button for exporting links
         self.export_links_button = tk.Button(self.top_bar, text="Export Links", command=self.export_links)
         self.export_links_button.pack(side=tk.LEFT)
@@ -63,7 +68,7 @@ class iMessageViewer(tk.Tk):
         # Define the links list frame
         self.links_frame = tk.Frame(self, width=300)  # Set a fixed width for the links frame
         self.links_text = tk.Text(self.links_frame, width=1, height=10, font=self.custom_font, cursor="arrow")
-        self.links_text.tag_configure("link", foreground="blue", underline=True)
+        self.links_text.tag_configure("link", foreground="white", underline=True)
         self.links_text.pack(fill=tk.BOTH, expand=True)
 
         # Add widgets to the paned window
@@ -233,6 +238,38 @@ class iMessageViewer(tk.Tk):
                     messagebox.showinfo("No Links Found", "No links found in the selected chat.")
 
             messagebox.showinfo("Links Exported", f"Links from {chat_name or chat_identifier} exported to {zip_path}")
+
+    def filter_links(self, event=None):
+        """Filters the links list based on search input."""
+        search_term = self.search_bar_links.get().lower()
+        self.links_text.configure(state=tk.NORMAL)
+        self.links_text.delete('1.0', tk.END)
+
+        selection = self.chat_list.curselection()
+        if not selection:
+            return
+
+        index = selection[0]
+        chat_id, chat_name, chat_identifier = self.chats[index]
+        messages = self.collector.read_messages(chat_id)
+
+        url_pattern = re.compile(r'https?://\S+')
+        links = set()  # Use a set to avoid duplicate links
+
+        for message in messages:
+            content = message['body']
+            message_links = url_pattern.findall(content)
+            links.update(message_links)
+
+        for link in links:
+            if search_term in link.lower():
+                start_index = self.links_text.index(tk.END)
+                self.links_text.insert(tk.END, link + "\n\n", "link")  # Two newlines for separation
+                end_index = self.links_text.index(tk.END)
+                self.links_text.tag_add(link, start_index, end_index)
+                self.links_text.tag_bind(link, "<Button-1>", lambda e, url=link: self.click_link(url))
+
+        self.links_text.configure(state=tk.DISABLED)
 
 if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
