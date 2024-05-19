@@ -42,17 +42,20 @@ class iMessageViewer(tk.Tk):
         self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_bar.bind("<KeyRelease>", self.filter_chats)
         
-        
-        
         self.search_bar_links = tk.Entry(self.top_bar, font=self.custom_font)
         self.search_bar_links.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_bar_links.bind("<KeyRelease>", self.filter_links)
+        
         # New button for exporting links
         self.export_links_button = tk.Button(self.top_bar, text="Export Links", command=self.export_links)
         self.export_links_button.pack(side=tk.LEFT)
 
         self.links_button = tk.Button(self.top_bar, text="Links", command=self.toggle_links)
         self.links_button.pack(side=tk.RIGHT)
+
+        # New button for analyzing conversation
+        self.analyze_button = tk.Button(self.top_bar, text="Analyze Conversation", command=self.analyze_conversation)
+        self.analyze_button.pack(side=tk.RIGHT)
 
         # Main Content
         self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
@@ -80,6 +83,10 @@ class iMessageViewer(tk.Tk):
         self.paned_window.forget(self.links_frame)
 
         self.create_toolbar()
+
+    def analyze_conversation(self):
+        """Open the analysis link."""
+        webbrowser.open("https://gemini.google.com/app")
 
     def toggle_links(self):
         if self.links_frame.winfo_ismapped():
@@ -264,7 +271,7 @@ class iMessageViewer(tk.Tk):
         for link in links:
             if search_term in link.lower():
                 start_index = self.links_text.index(tk.END)
-                self.links_text.insert(tk.END, link + "\n\n", "link")  # Two newlines for separation
+                self.links_text.insert(tk.END, link + "\n\n", "link")  
                 end_index = self.links_text.index(tk.END)
                 self.links_text.tag_add(link, start_index, end_index)
                 self.links_text.tag_bind(link, "<Button-1>", lambda e, url=link: self.click_link(url))
