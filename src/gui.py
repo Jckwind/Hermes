@@ -28,6 +28,15 @@ class iMessageViewer(tk.Tk):
         # Automatically load chats upon initialization
         self.load_chats()
 
+        self.show_introduction_window()  # Call the introduction window method
+
+    def show_introduction_window(self):
+        introduction_window = tk.Toplevel(self)
+        introduction_window.title("Welcome to Hermes iMessage Viewer")
+        
+        instructions_label = tk.Label(introduction_window, text="Instructions:\n1. Click on a conversation either a group chat or a single chat and view past imessages\n2. Click on the links button to view links sent within a chat\n\n3. Click on the export link to save a specfifc conversation to a .txt file on your computer. 2 .txt files will be saved, one being the converation and the other beting the links sent within a chat. \n3. Click the anaylize text button to be redirected to Hermes, an AI powerd by google. Now you can anaylize conversations")
+        instructions_label.pack(padx=20, pady=20)
+
     def create_widgets(self):
         # Top Bar
         self.top_bar = tk.Frame(self)
