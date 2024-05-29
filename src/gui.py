@@ -1,10 +1,11 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog, font  
+from tkinter import messagebox, filedialog, font, ttk
 from pathlib import Path
 import zipfile
 from text_collector import TextCollector
-import re  
-import webbrowser  
+import re
+import json
+import webbrowser
 
 class iMessageViewer(tk.Tk):
     """
@@ -14,6 +15,7 @@ class iMessageViewer(tk.Tk):
         collector (TextCollector): Object to interact with the iMessage database.
         chats (list): List of chat IDs and names.
         custom_font (tk.Font): Font used for the application.
+        show_intro (bool): Flag to control whether to show the introduction window.
 
     Methods:
         show_introduction_window(): Displays an introduction window with instructions.
@@ -44,19 +46,33 @@ class iMessageViewer(tk.Tk):
             return
 
         self.chats = []
+        self.show_intro = True  # Initialize the flag
         self.create_widgets()
 
         # Automatically load chats upon initialization
         self.load_chats()
 
-        self.show_introduction_window()  
+        self.load_intro_decision()  # Load the stored decision
+        if self.show_intro:
+            self.show_introduction_window()
+
+    def load_intro_decision(self):
+        """Loads the "Do not show again" decision from a configuration file."""
+        config_file = Path(__file__).parent / ".hermes_config.json"  # Use the script's directory
+        if config_file.exists():
+            try:
+                with open(config_file, "r") as f:
+                    data = json.load(f)
+                    self.show_intro = not data.get("show_intro", True)  # Default to True if key not found
+            except Exception as e:
+                print(f"Error loading intro decision: {e}")
 
     def show_introduction_window(self):
         """Displays a window with instructions on how to use the application."""
         introduction_window = tk.Toplevel(self)
         introduction_window.title("Welcome to Hermes iMessage Viewer")
-        
-        instructions_label = tk.Label(introduction_window, 
+
+        instructions_label = tk.Label(introduction_window,
                                        text="Instructions:\n"
                                             "1. Click on a conversation (either a group chat or a single chat) to view past iMessages.\n"
                                             "2. Click on the 'Links' button to view links sent within that chat.\n"
@@ -68,14 +84,44 @@ class iMessageViewer(tk.Tk):
                                        wraplength=400)  # Wrap long lines
         instructions_label.pack(padx=20, pady=20)
 
+        # "Do not show again" checkbox
+        self.dont_show_again_var = tk.BooleanVar(value=False)
+        dont_show_again_checkbox = tk.Checkbutton(introduction_window,
+                                                 text="Do not show this again",
+                                                 variable=self.dont_show_again_var,
+                                                 font=self.custom_font)
+        dont_show_again_checkbox.pack(pady=10)
+
+        def close_intro_window():
+            self.show_intro = not self.dont_show_again_var.get()  # Update the flag
+            self.save_intro_decision()  # Save the decision
+            introduction_window.destroy()
+
+        close_button = tk.Button(introduction_window, text="Close", command=close_intro_window, font=self.custom_font)
+        close_button.pack(pady=10)
+
+    def save_intro_decision(self):
+        """Saves the "Do not show again" decision to a configuration file."""
+        config_file = Path(__file__).parent / ".hermes_config.json"  # Use the script's directory
+        try:
+            with open(config_file, "w") as f:
+                json.dump({"show_intro": not self.show_intro}, f)  # Write "true" or "false"
+        except Exception as e:
+            print(f"Error saving intro decision: {e}")
+
     def create_widgets(self):
         """Creates and arranges all the UI elements (widgets) of the application."""
         # Top Bar
         self.top_bar = tk.Frame(self, pady=10)
         self.top_bar.pack(fill=tk.X)
 
-        self.export_button = tk.Button(self.top_bar, text="Export", command=self.export_chat_and_links, font=self.custom_font)
-        self.export_button.pack(side=tk.LEFT)
+        # Create a style for the buttons
+        style = ttk.Style()
+        style.configure("TButton", font=self.custom_font, padding=10)
+
+        # Export Button
+        self.export_button = ttk.Button(self.top_bar, text="Export", command=self.export_chat_and_links, style="TButton")
+        self.export_button.pack(side=tk.LEFT, padx=5)
 
         # Separate frame for search bars
         self.search_frame = tk.Frame(self.top_bar)
@@ -83,16 +129,16 @@ class iMessageViewer(tk.Tk):
 
         # Search bar for chats
         self.search_bar = tk.Entry(self.search_frame, font=self.custom_font)
-        self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         self.search_bar.bind("<KeyRelease>", self.filter_chats)
 
-        # Analyze button
-        self.analyze_button = tk.Button(self.top_bar, text="Analyze Conversation", command=self.analyze_conversation, font=self.custom_font)
-        self.analyze_button.pack(side=tk.RIGHT)
+        # Analyze Button
+        self.analyze_button = ttk.Button(self.top_bar, text="Analyze Conversation", command=self.analyze_conversation, style="TButton")
+        self.analyze_button.pack(side=tk.RIGHT, padx=5)
 
-        # Links button
-        self.links_button = tk.Button(self.top_bar, text="Links", command=self.toggle_links, font=self.custom_font)
-        self.links_button.pack(side=tk.RIGHT)
+        # Links Button
+        self.links_button = ttk.Button(self.top_bar, text="Links", command=self.toggle_links, style="TButton")
+        self.links_button.pack(side=tk.RIGHT, padx=5)
 
         # Main Content
         self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, width=50)
@@ -101,14 +147,16 @@ class iMessageViewer(tk.Tk):
         # Chat list
         self.chat_list = tk.Listbox(self.paned_window, width=40, height=20, font=self.custom_font)
         self.chat_list.bind('<<ListboxSelect>>', self.display_messages)
+        self.chat_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Message area
         self.message_text = tk.Text(self.paned_window, wrap=tk.WORD, font=self.custom_font, state=tk.DISABLED)
+        self.message_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Links area (initially hidden)
         self.links_frame = tk.Frame(self.paned_window)
         self.links_text = tk.Text(self.links_frame, wrap=tk.WORD, font=self.custom_font, cursor="arrow", state=tk.DISABLED)
-        self.links_text.tag_configure("link", foreground="blue", underline=True)
+        self.links_text.tag_configure("link", foreground="white", underline=True, background="blue")  # White text on blue background
         self.links_text.pack(fill=tk.BOTH, expand=True)
 
         # Add chat list and message area to the paned window
@@ -131,7 +179,7 @@ class iMessageViewer(tk.Tk):
 
     def export_chat_and_links(self):
         """
-        Exports the selected chat messages and extracted links to separate .txt files 
+        Exports the selected chat messages and extracted links to separate .txt files
         within a .zip archive.
         """
         selection = self.chat_list.curselection()
@@ -161,7 +209,7 @@ class iMessageViewer(tk.Tk):
                         links.extend(url_pattern.findall(message['body']))
 
                     if links:
-                        export_links_text = '\n'.join(set(links)) 
+                        export_links_text = '\n'.join(set(links))
                         zipf.writestr(f"{chat_id}_links.txt", export_links_text)
                     else:
                         messagebox.showinfo("No Links Found", "No links found in the selected chat.")
@@ -186,7 +234,7 @@ class iMessageViewer(tk.Tk):
         """
         search_term = self.search_bar.get().lower()
         self.chat_list.delete(0, tk.END)
-        
+
         for _, chat_name, chat_identifier in self.chats:
             display_name = f'{chat_identifier}' if not chat_name else f'{chat_name}'
             if search_term in display_name.lower():
@@ -194,9 +242,9 @@ class iMessageViewer(tk.Tk):
 
     def load_chats(self):
         """Loads chats from the database and populates the chat listbox."""
-        self.chat_list.delete(0, tk.END)  
+        self.chat_list.delete(0, tk.END)
         self.chats = self.collector.get_all_chat_ids_with_labels()
-        self.filter_chats() 
+        self.filter_chats()
 
     def display_messages(self, event):
         """
@@ -214,9 +262,9 @@ class iMessageViewer(tk.Tk):
         self.message_text.delete('1.0', tk.END)
 
         self.links_text.configure(state=tk.NORMAL)
-        self.links_text.delete('1.0', tk.END) 
+        self.links_text.delete('1.0', tk.END)
         url_pattern = re.compile(r'https?://\S+')
-        links = set()  
+        links = set()
 
         for message in messages:
             sender = message['phone_number']
