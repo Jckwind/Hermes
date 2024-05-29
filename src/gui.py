@@ -25,17 +25,17 @@ class iMessageViewer(tk.Tk):
         self.chats = []
         self.create_widgets()
 
+        # Automatically load chats upon initialization
+        self.load_chats()
+
     def create_widgets(self):
         # Top Bar
         self.top_bar = tk.Frame(self)
         self.top_bar.pack(fill=tk.X)
 
-        # Move the Export button to the top left
-        self.export_button = tk.Button(self.top_bar, text="Export", command=self.export_conversation)
+        # Update the remaining button to handle both export functionalities
+        self.export_button = tk.Button(self.top_bar, text="Export", command=self.export_chat_and_links)
         self.export_button.pack(side=tk.LEFT)
-
-        self.connect_button = tk.Button(self.top_bar, text="Connect", command=self.load_chats)
-        self.connect_button.pack(side=tk.LEFT)
 
         # Entry and Listbox widgets use the custom font
         self.search_bar = tk.Entry(self.top_bar, font=self.custom_font)
@@ -46,10 +46,6 @@ class iMessageViewer(tk.Tk):
         self.search_bar_links.pack(side=tk.LEFT, fill=tk.X, expand=True)
         self.search_bar_links.bind("<KeyRelease>", self.filter_links)
         
-        # New button for exporting links
-        self.export_links_button = tk.Button(self.top_bar, text="Export Links", command=self.export_links)
-        self.export_links_button.pack(side=tk.LEFT)
-
         self.links_button = tk.Button(self.top_bar, text="Links", command=self.toggle_links)
         self.links_button.pack(side=tk.RIGHT)
 
@@ -104,46 +100,34 @@ class iMessageViewer(tk.Tk):
     def create_toolbar(self):
         toolbar = Toolbar(self)
 
-        toolbar.add_button("Export All", self.export_all_conversations)
-        toolbar.add_button("Export My Texts", self.export_my_texts)
-
-    def export_all_conversations(self):
-        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile="all_conversations.zip")
-        if zip_path:
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for chat_id, _, _ in self.chats:
-                    messages = self.collector.read_messages(chat_id)
-                    export_text = self.format_messages_for_export(messages)
-                    zipf.writestr(f"{chat_id}.txt", export_text)
-            messagebox.showinfo("Conversations Exported", f"All conversations exported to {zip_path}")
-
-    def export_my_texts(self):
-        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile="my_texts.zip")
-        if zip_path:
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                for chat_id, _, _ in self.chats:
-                    messages = self.collector.read_messages(chat_id)
-                    my_texts = [msg for msg in messages if msg['phone_number'] == 'Jack']
-                    export_text = self.format_messages_for_export(my_texts)
-                    zipf.writestr(f"{chat_id}_my_texts.txt", export_text)
-            messagebox.showinfo("My Texts Exported", f"All your texts exported to {zip_path}")
-
-    def export_conversation(self):
+    def export_chat_and_links(self):
         selection = self.chat_list.curselection()
         if not selection:
+            messagebox.showerror("Selection Error", "No chat selected.")
             return
 
         index = selection[0]
         chat_id, chat_name, chat_identifier = self.chats[index]
-        messages = self.collector.read_messages(chat_id)
 
-        export_text = self.format_messages_for_export(messages)
+        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile=f"{chat_name or chat_identifier}_chat_and_links.zip")
+        if zip_path:
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                messages = self.collector.read_messages(chat_id)
+                export_text = self.format_messages_for_export(messages)
+                zipf.writestr(f"{chat_id}_chat.txt", export_text)
 
-        default_filename = f"{chat_name or chat_identifier}.txt"
-        file_path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile=default_filename)
-        if file_path:
-            self.save_messages_to_file(file_path, export_text)
-            messagebox.showinfo("Conversation Exported", f"Conversation saved to {file_path}")
+                links = []
+                url_pattern = re.compile(r'https?://\S+')
+                for message in messages:
+                    links.extend(url_pattern.findall(message['body']))
+
+                if links:
+                    export_links_text = '\n'.join(set(links))  # Use set to remove duplicates
+                    zipf.writestr(f"{chat_id}_links.txt", export_links_text)
+                else:
+                    messagebox.showinfo("No Links Found", "No links found in the selected chat.")
+
+            messagebox.showinfo("Chat and Links Exported", f"Chat and links from {chat_name or chat_identifier} exported to {zip_path}")
 
     def format_messages_for_export(self, messages):
         export_text = ""
@@ -219,32 +203,6 @@ class iMessageViewer(tk.Tk):
     def click_link(self, url):
         """Open the link if clicked."""
         webbrowser.open(url)
-
-    def export_links(self):
-        selection = self.chat_list.curselection()
-        if not selection:
-            messagebox.showerror("Selection Error", "No chat selected.")
-            return
-
-        index = selection[0]
-        chat_id, chat_name, chat_identifier = self.chats[index]
-
-        zip_path = filedialog.asksaveasfilename(defaultextension=".zip", initialfile=f"{chat_name or chat_identifier}_links.zip")
-        if zip_path:
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                messages = self.collector.read_messages(chat_id)
-                links = []
-                url_pattern = re.compile(r'https?://\S+')
-                for message in messages:
-                    links.extend(url_pattern.findall(message['body']))
-
-                if links:
-                    export_text = '\n'.join(set(links))  # Use set to remove duplicates
-                    zipf.writestr(f"{chat_id}_links.txt", export_text)
-                else:
-                    messagebox.showinfo("No Links Found", "No links found in the selected chat.")
-
-            messagebox.showinfo("Links Exported", f"Links from {chat_name or chat_identifier} exported to {zip_path}")
 
     def filter_links(self, event=None):
         """Filters the links list based on search input."""
