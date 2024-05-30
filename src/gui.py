@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog, font, ttk
+from tkinter import messagebox, filedialog, font, ttk, Canvas, Text
 from pathlib import Path
 import zipfile
 from text_collector import TextCollector
@@ -30,6 +30,7 @@ class iMessageViewer(tk.Tk):
         display_messages(): Displays messages of the selected chat and extracts links.
         click_link(): Opens the clicked link in a browser.
         filter_links(): Filters the displayed links based on the search term.
+        create_message_bubble(canvas, text, sender, x, y, bubble_color): Creates a message bubble on the canvas.
     """
     def __init__(self, db_path):
         super().__init__()
@@ -130,7 +131,7 @@ class iMessageViewer(tk.Tk):
         # Search bar for chats
         self.search_bar = tk.Entry(self.search_frame, font=self.custom_font)
         self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        self.search_bar.bind("<KeyRelease>", self.filter_chats)
+       
 
         # Analyze Button
         self.analyze_button = ttk.Button(self.top_bar, text="Analyze Conversation", command=self.analyze_conversation, style="TButton")
@@ -144,14 +145,16 @@ class iMessageViewer(tk.Tk):
         self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, width=50)
         self.paned_window.pack(fill=tk.BOTH, expand=True)
 
-        # Chat list
+        # Immesage Windo
         self.chat_list = tk.Listbox(self.paned_window, width=40, height=20, font=self.custom_font)
         self.chat_list.bind('<<ListboxSelect>>', self.display_messages)
         self.chat_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Message area
-        self.message_text = tk.Text(self.paned_window, wrap=tk.WORD, font=self.custom_font, state=tk.DISABLED)
-        self.message_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.message_frame = tk.Frame(self.paned_window)
+        self.message_canvas = tk.Canvas(self.message_frame, width=600, height=400, bg="lightgray")
+        print(f"Created message_canvas: {self.message_canvas}")  # Debug print
+        self.message_canvas.pack(fill=tk.BOTH, expand=True)
 
         # Links area (initially hidden)
         self.links_frame = tk.Frame(self.paned_window)
@@ -161,7 +164,7 @@ class iMessageViewer(tk.Tk):
 
         # Add chat list and message area to the paned window
         self.paned_window.add(self.chat_list, minsize=250)
-        self.paned_window.add(self.message_text, minsize=550)
+        self.paned_window.add(self.message_frame, minsize=550)
 
     def analyze_conversation(self):
         """Opens the Google Gemini webpage in the default web browser."""
@@ -258,14 +261,16 @@ class iMessageViewer(tk.Tk):
         chat_id, chat_name, chat_identifier = self.chats[index]
         messages = self.collector.read_messages(chat_id)
 
-        self.message_text.configure(state=tk.NORMAL)
-        self.message_text.delete('1.0', tk.END)
+        # Clear previous messages
+        for widget in self.message_frame.winfo_children():
+            widget.destroy()
 
         self.links_text.configure(state=tk.NORMAL)
         self.links_text.delete('1.0', tk.END)
         url_pattern = re.compile(r'https?://\S+')
         links = set()
 
+        current_y = 20  # Start from a small margin at the top
         for message in messages:
             sender = message['phone_number']
             content = message['body']
@@ -273,14 +278,56 @@ class iMessageViewer(tk.Tk):
             message_links = url_pattern.findall(content)
             links.update(message_links)
 
-            self.message_text.insert(tk.END, f"{sender}: {content} ({time_sent})\n\n")
+            if sender == "Me":
+                # Right-aligned blue bubble
+                bubble_color = "lightblue"
+                x = self.message_frame.winfo_width() - 200  # 200 is the approximate bubble width
+            else:
+                # Left-aligned gray bubble
+                bubble_color = "lightgray"
+                x = 20
+            
+            # Create the message bubble
+            self.create_message_bubble(self.message_frame, content, sender, x, current_y, bubble_color)
+            current_y += 40  # Adjust for the height of the bubble plus some spacing
 
         for link in links:
             self.links_text.insert(tk.END, "- " + link + "\n", "link")
             self.links_text.tag_bind("link", "<Button-1>", lambda e, url=link: self.click_link(url))
 
-        self.message_text.configure(state=tk.DISABLED)
         self.links_text.configure(state=tk.DISABLED)
+
+        # Update the scroll region of the canvas
+        self.message_frame.update_idletasks()  # Ensure the frame is updated
+        if self.message_canvas.winfo_exists():
+            self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
+        else:
+            print("message_canvas does not exist")
+
+    def create_message_bubble(self, frame, text, sender, x, y, bubble_color):
+        """Creates a message bubble on the frame."""
+        text_width = (frame.winfo_width() - 20) // 4  # Approximate text width, reduced to 1/4
+
+        # Create the rounded rectangle for the bubble
+        bubble = tk.Label(frame, text=text, bg=bubble_color, wraplength=text_width, justify="left", padx=10, pady=5)
+        bubble.place(x=x, y=y)
+
+    def setup_message_display(self):
+        """Sets up the scrollable message display area."""
+        self.message_canvas = tk.Canvas(self.main_frame)
+        self.message_frame = tk.Frame(self.message_canvas)
+        self.scrollbar = tk.Scrollbar(self.main_frame, orient="vertical", command=self.message_canvas.yview)
+        self.message_canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.scrollbar.pack(side="right", fill="y")
+        self.message_canvas.pack(side="left", fill="both", expand=True)
+        self.message_canvas.create_window((0, 0), window=self.message_frame, anchor="nw")
+
+        self.message_frame.bind("<Configure>", lambda e: self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all")))
+
+        self.links_text = tk.Text(self.main_frame, height=10, state=tk.DISABLED)
+        self.links_text.pack(fill="x")
+
 
     def click_link(self, url):
         """Opens the provided URL in the default web browser."""
@@ -290,3 +337,5 @@ if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
     app = iMessageViewer(db_path)
     app.mainloop()
+   
+   
