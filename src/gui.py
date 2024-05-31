@@ -282,7 +282,16 @@ class iMessageViewer(tk.Tk):
 
         self.scrollbar.config(command=self.message_text.yview)
 
-        current_y = 20  # Start from a small margin at the top
+        # --- Configure Tags ---
+        # Configure tags *before* inserting text
+        self.message_text.tag_configure("sender", justify="left", foreground="black")
+        self.message_text.tag_configure("my_message", justify="left", background="lightblue")
+        self.message_text.tag_configure("other_message", justify="left", background="lightgray")
+
+        # --- Insert Messages Efficiently ---
+        # Create a temporary string to store the text content
+        text_content = ""
+
         for message in messages:
             sender = message['phone_number']
             content = message['body']
@@ -290,20 +299,45 @@ class iMessageViewer(tk.Tk):
             message_links = url_pattern.findall(content)
             links.update(message_links)
 
-            # Determine the bubble color based on sender *for each message*
+            # Determine the bubble tag based on sender
             if sender == "Me":
-                # Right-aligned blue bubble
-                bubble_color = "lightblue"
-                x = self.message_frame.winfo_width() - 200  
+                bubble_tag = "my_message"
             else:
-                # Left-aligned gray bubble
-                bubble_color = "lightgray"
-                x = 20
+                bubble_tag = "other_message"
 
-            # Create the message bubble (pass bubble_color here)
-            self.create_message_bubble(self.message_text, content, sender, x, current_y, bubble_color)
-            current_y += 40  # Adjust for the height of the bubble plus some spacing
+            # Append the message to the temporary string
+            text_content += f"{sender}: {content}\n" 
 
+        # Insert all messages at once, using a single insert operation
+        self.message_text.insert(tk.END, text_content)
+
+        # --- Apply Tags to Messages ---
+        # Apply tags to each message after inserting text
+        start_index = "1.0"  # Start from the beginning
+        for message in messages:
+            sender = message['phone_number']
+            content = message['body']
+
+            # Calculate the end index for the message
+            end_index = self.message_text.index(f"{start_index} + {len(f'{sender}: {content}\n')} chars")
+            
+            # Determine the bubble tag based on sender
+            if sender == "Me":
+                bubble_tag = "my_message"
+            else:
+                bubble_tag = "other_message"
+
+            # Apply the tag to the message
+            self.message_text.tag_add(bubble_tag, start_index, end_index)
+
+            # Update the start index for the next message
+            start_index = end_index
+
+        # --- Update GUI ---
+        # Update the GUI to display the message bubbles
+        self.update() 
+
+        # --- Handle Links ---
         for link in links:
             self.links_text.insert(tk.END, "- " + link + "\n", "link")
             self.links_text.tag_bind("link", "<Button-1>", lambda e, url=link: self.click_link(url))
@@ -314,29 +348,6 @@ class iMessageViewer(tk.Tk):
         self.message_text.configure(state=tk.NORMAL)
         self.message_text.see(tk.END)  # Scroll to the bottom
         self.message_text.configure(state=tk.DISABLED)
-
-    def create_message_bubble(self, text_area, text, sender, x, y, bubble_color):
-        """Creates a message bubble within the text area."""
-        text_width = (self.message_frame.winfo_width() - 20) // 4  # Approximate text width, reduced to 1/4
-
-        # Configure the tags (before inserting text)
-        text_area.tag_configure("sender", justify="left", foreground="black") 
-        text_area.tag_configure("bubble", justify="left", background=bubble_color)  
-
-        # Insert the message into the text area, but wrap the text using the Text widget itself
-        text_area.insert(tk.END, f"{sender}: ", "sender")
-        text_area.insert(tk.END, text, "bubble")
-        text_area.insert(tk.END, "\n")  # Add a newline for the next message
-
-        # Apply the tags to the last inserted text
-        last_line = text_area.index(tk.END)
-        last_line = last_line.split(".")[0] + "." + str(int(last_line.split(".")[1]) - 1)  # Adjust to previous line
-        text_area.tag_add("sender", last_line, tk.END)
-        text_area.tag_add("bubble", last_line, tk.END)
-
-        # Set wraplength on the Text widget directly
-        text_area.configure(wrap=tk.WORD, width=text_width)
-
 
     def click_link(self, url):
         """Opens the provided URL in the default web browser."""
