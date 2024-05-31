@@ -26,11 +26,11 @@ class iMessageViewer(tk.Tk):
         format_messages_for_export(): Formats messages for saving to a file.
         save_messages_to_file(): Saves the given text to a file.
         filter_chats(): Filters the chat list based on the search term.
-        load_chats(): Loads chats from the database and displays them in the listbox.
+        load_contacts(): Loads contacts from the database and displays them in the listbox.
         display_messages(): Displays messages of the selected chat and extracts links.
         click_link(): Opens the clicked link in a browser.
         filter_links(): Filters the displayed links based on the search term.
-        create_message_bubble(canvas, text, sender, x, y, bubble_color): Creates a message bubble on the canvas.
+        create_message_bubble(text_area, text, sender, x, y, bubble_color): Creates a message bubble on the canvas.
     """
     def __init__(self, db_path):
         super().__init__()
@@ -51,7 +51,7 @@ class iMessageViewer(tk.Tk):
         self.create_widgets()
 
         # Automatically load chats upon initialization
-        self.load_chats()
+        self.load_contacts()
 
         self.load_intro_decision()  # Load the stored decision
         if self.show_intro:
@@ -131,7 +131,7 @@ class iMessageViewer(tk.Tk):
         # Search bar for chats
         self.search_bar = tk.Entry(self.search_frame, font=self.custom_font)
         self.search_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-       
+        self.search_bar.bind("<KeyRelease>", self.filter_chats)  # Bind to KeyRelease event
 
         # Analyze Button
         self.analyze_button = ttk.Button(self.top_bar, text="Analyze Conversation", command=self.analyze_conversation, style="TButton")
@@ -153,7 +153,7 @@ class iMessageViewer(tk.Tk):
         # Message area
         self.message_frame = tk.Frame(self.paned_window)
         self.message_canvas = tk.Canvas(self.message_frame, width=600, height=400, bg="lightgray")
-        print(f"Created message_canvas: {self.message_canvas}")  # Debug print
+        
         self.message_canvas.pack(fill=tk.BOTH, expand=True)
 
         # Links area (initially hidden)
@@ -243,10 +243,12 @@ class iMessageViewer(tk.Tk):
             if search_term in display_name.lower():
                 self.chat_list.insert(tk.END, display_name)
 
-    def load_chats(self):
+    def load_contacts(self):
         """Loads chats from the database and populates the chat listbox."""
         self.chat_list.delete(0, tk.END)
+        
         self.chats = self.collector.get_all_chat_ids_with_labels()
+       
         self.filter_chats()
 
     def display_messages(self, event):
@@ -270,6 +272,16 @@ class iMessageViewer(tk.Tk):
         url_pattern = re.compile(r'https?://\S+')
         links = set()
 
+        # Create the scrollbar
+        self.scrollbar = tk.Scrollbar(self.message_frame, orient="vertical")
+        self.scrollbar.pack(side="right", fill="y")
+
+        # Create the message text area
+        self.message_text = tk.Text(self.message_frame, wrap=tk.WORD, font=self.custom_font, cursor="arrow", state=tk.NORMAL, yscrollcommand=self.scrollbar.set)
+        self.message_text.pack(side="left", fill="both", expand=True)
+
+        self.scrollbar.config(command=self.message_text.yview)
+
         current_y = 20  # Start from a small margin at the top
         for message in messages:
             sender = message['phone_number']
@@ -278,17 +290,18 @@ class iMessageViewer(tk.Tk):
             message_links = url_pattern.findall(content)
             links.update(message_links)
 
+            # Determine the bubble color based on sender *for each message*
             if sender == "Me":
                 # Right-aligned blue bubble
                 bubble_color = "lightblue"
-                x = self.message_frame.winfo_width() - 200  # 200 is the approximate bubble width
+                x = self.message_frame.winfo_width() - 200  
             else:
                 # Left-aligned gray bubble
                 bubble_color = "lightgray"
                 x = 20
-            
-            # Create the message bubble
-            self.create_message_bubble(self.message_frame, content, sender, x, current_y, bubble_color)
+
+            # Create the message bubble (pass bubble_color here)
+            self.create_message_bubble(self.message_text, content, sender, x, current_y, bubble_color)
             current_y += 40  # Adjust for the height of the bubble plus some spacing
 
         for link in links:
@@ -297,36 +310,32 @@ class iMessageViewer(tk.Tk):
 
         self.links_text.configure(state=tk.DISABLED)
 
-        # Update the scroll region of the canvas
-        self.message_frame.update_idletasks()  # Ensure the frame is updated
-        if self.message_canvas.winfo_exists():
-            self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
-        else:
-            print("message_canvas does not exist")
+        # Enable scrollbar
+        self.message_text.configure(state=tk.NORMAL)
+        self.message_text.see(tk.END)  # Scroll to the bottom
+        self.message_text.configure(state=tk.DISABLED)
 
-    def create_message_bubble(self, frame, text, sender, x, y, bubble_color):
-        """Creates a message bubble on the frame."""
-        text_width = (frame.winfo_width() - 20) // 4  # Approximate text width, reduced to 1/4
+    def create_message_bubble(self, text_area, text, sender, x, y, bubble_color):
+        """Creates a message bubble within the text area."""
+        text_width = (self.message_frame.winfo_width() - 20) // 4  # Approximate text width, reduced to 1/4
 
-        # Create the rounded rectangle for the bubble
-        bubble = tk.Label(frame, text=text, bg=bubble_color, wraplength=text_width, justify="left", padx=10, pady=5)
-        bubble.place(x=x, y=y)
+        # Configure the tags (before inserting text)
+        text_area.tag_configure("sender", justify="left", foreground="black") 
+        text_area.tag_configure("bubble", justify="left", background=bubble_color)  
 
-    def setup_message_display(self):
-        """Sets up the scrollable message display area."""
-        self.message_canvas = tk.Canvas(self.main_frame)
-        self.message_frame = tk.Frame(self.message_canvas)
-        self.scrollbar = tk.Scrollbar(self.main_frame, orient="vertical", command=self.message_canvas.yview)
-        self.message_canvas.configure(yscrollcommand=self.scrollbar.set)
+        # Insert the message into the text area, but wrap the text using the Text widget itself
+        text_area.insert(tk.END, f"{sender}: ", "sender")
+        text_area.insert(tk.END, text, "bubble")
+        text_area.insert(tk.END, "\n")  # Add a newline for the next message
 
-        self.scrollbar.pack(side="right", fill="y")
-        self.message_canvas.pack(side="left", fill="both", expand=True)
-        self.message_canvas.create_window((0, 0), window=self.message_frame, anchor="nw")
+        # Apply the tags to the last inserted text
+        last_line = text_area.index(tk.END)
+        last_line = last_line.split(".")[0] + "." + str(int(last_line.split(".")[1]) - 1)  # Adjust to previous line
+        text_area.tag_add("sender", last_line, tk.END)
+        text_area.tag_add("bubble", last_line, tk.END)
 
-        self.message_frame.bind("<Configure>", lambda e: self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all")))
-
-        self.links_text = tk.Text(self.main_frame, height=10, state=tk.DISABLED)
-        self.links_text.pack(fill="x")
+        # Set wraplength on the Text widget directly
+        text_area.configure(wrap=tk.WORD, width=text_width)
 
 
     def click_link(self, url):
@@ -337,5 +346,3 @@ if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
     app = iMessageViewer(db_path)
     app.mainloop()
-   
-   
