@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog, font, ttk, Canvas, Text
+from tkinter import messagebox, filedialog, font, ttk, Canvas, Text, Frame, Label
 from pathlib import Path
 import zipfile
 from text_collector import TextCollector
@@ -263,7 +263,7 @@ class iMessageViewer(tk.Tk):
         chat_id, chat_name, chat_identifier = self.chats[index]
         messages = self.collector.read_messages(chat_id)
 
-        # Clear previous messages
+        # Clear previous messages from a different conversation 
         for widget in self.message_frame.winfo_children():
             widget.destroy()
 
@@ -276,21 +276,17 @@ class iMessageViewer(tk.Tk):
         self.scrollbar = tk.Scrollbar(self.message_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
 
-        # Create the message text area
-        self.message_text = tk.Text(self.message_frame, wrap=tk.WORD, font=self.custom_font, cursor="arrow", state=tk.NORMAL, yscrollcommand=self.scrollbar.set)
-        self.message_text.pack(side="left", fill="both", expand=True)
+        # Create the message canvas
+        self.message_canvas = Canvas(self.message_frame, width=600, height=400, bg="lightgray")
+        self.message_canvas.pack(side="left", fill="both", expand=True)
+        self.message_canvas.config(yscrollcommand=self.scrollbar.set)  # Connect scrollbar to canvas
 
-        self.scrollbar.config(command=self.message_text.yview)
+        self.scrollbar.config(command=self._scroll_canvas)  # Bind scrollbar to scroll function
 
-        # --- Configure Tags ---
-        # Configure tags *before* inserting text
-        self.message_text.tag_configure("sender", justify="left", foreground="black")
-        self.message_text.tag_configure("my_message", justify="left", background="lightblue")
-        self.message_text.tag_configure("other_message", justify="left", background="lightgray")
-
-        # --- Insert Messages Efficiently ---
-        # Create a temporary string to store the text content
-        text_content = ""
+        # --- Insert Messages Individually with Canvas Bubbles ---
+        y_offset = 10  # Initial vertical offset
+        message_height = 30  # Approximate height of a message
+        bubbles = []  # List to store BotBubble objects
 
         for message in messages:
             sender = message['phone_number']
@@ -301,41 +297,16 @@ class iMessageViewer(tk.Tk):
 
             # Determine the bubble tag based on sender
             if sender == "Me":
-                bubble_tag = "my_message"
+                bubble_color = "lightblue"
             else:
-                bubble_tag = "other_message"
+                bubble_color = "lightgray"
 
-            # Append the message to the temporary string
-            text_content += f"{sender}: {content}\n" 
+            # Create a BotBubble object
+            bubble = BotBubble(self.message_canvas, sender, content, bubble_color, y_offset)
+            bubbles.append(bubble)
 
-        # Insert all messages at once, using a single insert operation
-        self.message_text.insert(tk.END, text_content)
-
-        # --- Apply Tags to Messages ---
-        # Apply tags to each message after inserting text
-        start_index = "1.0"  # Start from the beginning
-        for message in messages:
-            sender = message['phone_number']
-            content = message['body']
-
-            # Calculate the end index for the message
-            end_index = self.message_text.index(f"{start_index} + {len(f'{sender}: {content}\n')} chars")
-            
-            # Determine the bubble tag based on sender
-            if sender == "Me":
-                bubble_tag = "my_message"
-            else:
-                bubble_tag = "other_message"
-
-            # Apply the tag to the message
-            self.message_text.tag_add(bubble_tag, start_index, end_index)
-
-            # Update the start index for the next message
-            start_index = end_index
-
-        # --- Update GUI ---
-        # Update the GUI to display the message bubbles
-        self.update() 
+            # Update the vertical offset for the next message
+            y_offset += bubble.height + 10  # Add space between messages
 
         # --- Handle Links ---
         for link in links:
@@ -344,14 +315,40 @@ class iMessageViewer(tk.Tk):
 
         self.links_text.configure(state=tk.DISABLED)
 
+        # --- Update Canvas Height AND Scrollbar ---
+        # Set the canvas height to accommodate all the messages
+        self.message_canvas.config(height=y_offset)  # Update height based on y_offset
+
         # Enable scrollbar
-        self.message_text.configure(state=tk.NORMAL)
-        self.message_text.see(tk.END)  # Scroll to the bottom
-        self.message_text.configure(state=tk.DISABLED)
+        self.message_canvas.configure(state=tk.NORMAL)
+        self.message_canvas.see(tk.END)  
+        self.message_canvas.configure(state=tk.DISABLED)
+
+        # --- Wrap Text (ONLY THE LINKS TEXT) ---
+        # Wrap the text in the message area
+        self.links_text.tag_configure("all", wrap=tk.WORD)
 
     def click_link(self, url):
         """Opens the provided URL in the default web browser."""
         webbrowser.open(url)
+
+    def _scroll_canvas(self, *args):
+        """Scrolls the canvas based on the scrollbar's position."""
+        self.message_canvas.yview(*args)
+
+class BotBubble:
+    def __init__(self, master, sender, message, bubble_color, y_offset):
+        self.master = master
+        self.frame = Frame(master, bg=bubble_color)
+        self.i = self.master.create_window(10, y_offset, anchor="nw", window=self.frame)
+        Label(self.frame, text=sender, font=("Helvetica", 9), bg=bubble_color).grid(row=0, column=0, sticky="w", padx=5)
+        Label(self.frame, text=message, font=("Helvetica", 9), bg=bubble_color).grid(row=1, column=0, sticky="w", padx=5, pady=3)
+        self.master.update_idletasks()  # Update to get accurate dimensions
+        self.height = self.master.bbox(self.i)[3] - self.master.bbox(self.i)[1]  # Calculate height after creation
+
+    def draw_triangle(self, widget):
+        x1, y1, x2, y2 = self.master.bbox(widget)
+        return x1, y2 - 10, x1 - 15, y2 + 10, x1, y2
 
 if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
