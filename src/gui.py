@@ -277,7 +277,7 @@ class iMessageViewer(tk.Tk):
         self.scrollbar.pack(side="right", fill="y")
 
         # --- Create Message Canvas (with scrollbar tied to it) ---
-        self.message_canvas = Canvas(self.message_frame, width=600, height=400, bg="lightgray")
+        self.message_canvas = Canvas(self.message_frame, width=600, height=400, bg="black")
         self.message_canvas.pack(side="left", fill="both", expand=True)
         self.message_canvas.config(yscrollcommand=self.scrollbar.set)
 
@@ -298,13 +298,19 @@ class iMessageViewer(tk.Tk):
             # Determine the bubble tag based on sender
             if sender == "Me":
                 bubble_color = "lightblue"
+                bubble_x = self.message_canvas.winfo_width() - 110  # Adjust the X-coordinate for right alignment
+                bubble_anchor = "ne"  # Top-right alignment
             else:
                 bubble_color = "lightgray"
+                bubble_x = 10  # Default X-coordinate for left alignment
+                bubble_anchor = "nw"  # Top-left alignment
 
-            # Create a BotBubble object
-            bubble = BotBubble(self.message_canvas, sender, content, bubble_color, y_offset)
+            # Create a BotBubble object (passing is_user flag)
+            bubble = BotBubble(self.message_canvas, sender, content, bubble_color, y_offset, False)
             bubbles.append(bubble)
 
+
+            self.message_canvas.create_window(bubble_x, y_offset, anchor=bubble_anchor, window=bubble.frame)
             # Update the vertical offset for the next message
             y_offset += bubble.height + 10  # Add space between messages
 
@@ -321,25 +327,24 @@ class iMessageViewer(tk.Tk):
         # --- Enable Scrolling ---
         self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
 
-        # --- Wrap Text (ONLY THE LINKS TEXT) ---
-        # Wrap the text in the message area
-        self.links_text.tag_configure("all", wrap=tk.WORD)
-
     def click_link(self, url):
         """Opens the provided URL in the default web browser."""
         webbrowser.open(url)
 
-    def _scroll_canvas(self, *args):
-        """Scrolls the canvas based on the scrollbar's position."""
-        self.message_canvas.yview(*args)
-
 class BotBubble:
-    def __init__(self, master, sender, message, bubble_color, y_offset):
+    def __init__(self, master, sender, message, bubble_color, y_offset, is_user):
         self.master = master
         self.frame = Frame(master, bg=bubble_color)
         self.i = self.master.create_window(10, y_offset, anchor="nw", window=self.frame)
+
         Label(self.frame, text=sender, font=("Helvetica", 9), bg=bubble_color).grid(row=0, column=0, sticky="w", padx=5)
-        Label(self.frame, text=message, font=("Helvetica", 9), bg=bubble_color).grid(row=1, column=0, sticky="w", padx=5, pady=3)
+
+        # Right-align user's messages, otherwise left align
+        if is_user:
+            Label(self.frame, text=message, font=("Helvetica", 9), bg=bubble_color, anchor="e").grid(row=1, column=0, sticky="e", padx=5, pady=3)
+        else:
+            Label(self.frame, text=message, font=("Helvetica", 9), bg=bubble_color, anchor="w").grid(row=1, column=0, sticky="w", padx=5, pady=3)
+
         self.master.update_idletasks()  # Update to get accurate dimensions
         self.height = self.master.bbox(self.i)[3] - self.master.bbox(self.i)[1]  # Calculate height after creation
 
