@@ -272,18 +272,18 @@ class iMessageViewer(tk.Tk):
         url_pattern = re.compile(r'https?://\S+')
         links = set()
 
-        # Create the scrollbar
+        # --- Create Scrollbar (outside the canvas) ---
         self.scrollbar = tk.Scrollbar(self.message_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
 
-        # Create the message canvas
+        # --- Create Message Canvas (with scrollbar tied to it) ---
         self.message_canvas = Canvas(self.message_frame, width=600, height=400, bg="lightgray")
         self.message_canvas.pack(side="left", fill="both", expand=True)
-        self.message_canvas.config(yscrollcommand=self.scrollbar.set)  # Connect scrollbar to canvas
+        self.message_canvas.config(yscrollcommand=self.scrollbar.set)
 
-        self.scrollbar.config(command=self._scroll_canvas)  # Bind scrollbar to scroll function
+        self.scrollbar.config(command=self.message_canvas.yview)
 
-        # --- Insert Messages Individually with Canvas Bubbles ---
+        # --- Insert Messages with Canvas Bubbles ---
         y_offset = 10  # Initial vertical offset
         message_height = 30  # Approximate height of a message
         bubbles = []  # List to store BotBubble objects
@@ -315,14 +315,11 @@ class iMessageViewer(tk.Tk):
 
         self.links_text.configure(state=tk.DISABLED)
 
-        # --- Update Canvas Height AND Scrollbar ---
-        # Set the canvas height to accommodate all the messages
+        # --- Update Canvas Height ---
         self.message_canvas.config(height=y_offset)  # Update height based on y_offset
 
-        # Enable scrollbar
-        self.message_canvas.configure(state=tk.NORMAL)
-        self.message_canvas.see(tk.END)  
-        self.message_canvas.configure(state=tk.DISABLED)
+        # --- Enable Scrolling ---
+        self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
 
         # --- Wrap Text (ONLY THE LINKS TEXT) ---
         # Wrap the text in the message area
