@@ -38,7 +38,7 @@ class iMessageViewer(tk.Tk):
         self.geometry('1200x700')  # Increased window size
 
         # Set up the font
-        self.custom_font = font.Font(family="Arial", size=14)  # Modern font, larger size
+        self.custom_font = font.Font(family="Arial", size=14, weight="bold")  # Modern font, larger size, bold text
 
         self.collector = TextCollector(db_path)
         if not self.collector.conn:
@@ -277,7 +277,7 @@ class iMessageViewer(tk.Tk):
         self.scrollbar.pack(side="right", fill="y")
 
         # --- Create Message Canvas (with scrollbar tied to it) ---
-        self.message_canvas = Canvas(self.message_frame, width=600, height=400, bg="black")
+        self.message_canvas = Canvas(self.message_frame, width=600, height=400, bg="grey5")
         self.message_canvas.pack(side="left", fill="both", expand=True)
         self.message_canvas.config(yscrollcommand=self.scrollbar.set)
 
@@ -309,7 +309,8 @@ class iMessageViewer(tk.Tk):
             bubble = BotBubble(self.message_canvas, sender, content, bubble_color, y_offset, False)
             bubbles.append(bubble)
 
-
+            bubble_x = self.winfo_width() - 345 if sender == "Me" else 10
+            
             self.message_canvas.create_window(bubble_x, y_offset, anchor=bubble_anchor, window=bubble.frame)
             # Update the vertical offset for the next message
             y_offset += bubble.height + 10  # Add space between messages
@@ -337,21 +338,44 @@ class BotBubble:
         self.frame = Frame(master, bg=bubble_color)
         self.i = self.master.create_window(10, y_offset, anchor="nw", window=self.frame)
 
-        Label(self.frame, text=sender, font=("Helvetica", 9), bg=bubble_color).grid(row=0, column=0, sticky="w", padx=5)
+        Label(self.frame, text=sender, font=("Helvetica", 20, "italic"), bg=bubble_color).grid(row=0, column=0, sticky="w", padx=5)
+
+        # Split message into lines if it exceeds 200 units
+        wrapped_message = self.wrap_text(message, 100)
 
         # Right-align user's messages, otherwise left align
         if is_user:
-            Label(self.frame, text=message, font=("Helvetica", 9), bg=bubble_color, anchor="e").grid(row=1, column=0, sticky="e", padx=5, pady=3)
+            Label(self.frame, text=wrapped_message, font=("Helvetica", 18, "bold"), bg=bubble_color, anchor="w", justify="left").grid(row=1, column=0, sticky="e", padx=5, pady=3)
         else:
-            Label(self.frame, text=message, font=("Helvetica", 9), bg=bubble_color, anchor="w").grid(row=1, column=0, sticky="w", padx=5, pady=3)
+            Label(self.frame, text=wrapped_message, font=("Helvetica", 18, "bold"), bg=bubble_color, anchor="w").grid(row=1, column=0, sticky="w", padx=5, pady=3)
 
         self.master.update_idletasks()  # Update to get accurate dimensions
         self.height = self.master.bbox(self.i)[3] - self.master.bbox(self.i)[1]  # Calculate height after creation
 
+    def wrap_text(self, text, max_length):
+        """Wraps text to a new line if it exceeds the max_length."""
+        words = text.split()
+        lines = []
+        current_line = ""
+
+        for word in words:
+            if len(current_line) + len(word) + 1 > max_length:
+                lines.append(current_line)
+                current_line = word
+            else:
+                if current_line:
+                    current_line += " " + word
+                else:
+                    current_line = word
+
+        if current_line:
+            lines.append(current_line)
+
+        return "\n".join(lines)
+
     def draw_triangle(self, widget):
         x1, y1, x2, y2 = self.master.bbox(widget)
         return x1, y2 - 10, x1 - 15, y2 + 10, x1, y2
-
 if __name__ == "__main__":
     db_path = Path.home() / 'Library' / 'Messages' / 'chat.db'
     app = iMessageViewer(db_path)
