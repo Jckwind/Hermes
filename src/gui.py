@@ -97,30 +97,28 @@ class iMessageViewer(tk.Tk):
             db_path (Path): Path to the iMessage database file.
         """
         super().__init__()
-        self.title("Hermes iMessage Viewer")
-        self.geometry("1200x700") 
+        self.title('Hermes iMessage Viewer')
+        self.geometry('1200x700')
 
-        # Set up the font
-        self.custom_font = font.Font(family="Arial", size=14, weight="bold")  
+        self.custom_font = font.Font(family="Arial", size=14, weight="bold")
 
         self.collector = TextCollector(db_path)
         if not self.collector.conn:
-            messagebox.showerror(
-                "Database Error", "Cannot connect to the iMessage database."
-            )
+            messagebox.showerror("Database Error", "Cannot connect to the iMessage database.")
             self.destroy()
             return
 
         self.chats = []
-        self.show_intro = True  # Initialize the flag
+        self.show_intro = True
         self.create_widgets()
 
-        # Automatically load chats upon initialization
         self.load_contacts()
 
-        self.load_intro_decision()  # Load the stored decision
+        self.load_intro_decision()
         if self.show_intro:
             self.show_introduction_window()
+
+        self.dump_window = None  # Initialize dump window to None
 
     def load_intro_decision(self):
         """Loads the "Do not show again" decision from a configuration file."""
@@ -237,11 +235,28 @@ class iMessageViewer(tk.Tk):
         self.paned_window.add(self.message_frame, minsize=550)
 
         # Dump Button (replaces Export Button)
-        self.dump_button = ttk.Button(self.top_bar, text="Dump", command=self.open_dump_dialog, style="TButton")
+        self.dump_button = ttk.Button(self.top_bar, text="Dump", command=self.toggle_dump_window, style="TButton")
         self.dump_button.pack(side=tk.LEFT, padx=5)
 
-    def open_dump_dialog(self):
-        """Opens a dialog to select members for the dump file."""
+        # Dump Window Frame (initially hidden)
+        self.dump_frame = tk.Frame(self.paned_window)
+        self.paned_window.add(self.dump_frame, minsize=250)  # Add the frame initially
+        self.paned_window.forget(self.dump_frame) # Hide it
+
+    def toggle_dump_window(self):
+        """
+        Toggles the visibility of the dump window in the paned window.
+        If visible, it hides the frame; otherwise, it creates and shows the window.
+        """
+        if self.dump_window:
+            # Hide the dump window
+            self.paned_window.forget(self.dump_frame)
+            self.dump_window = None
+        else:
+            # Create and show the dump window
+            self.create_dump_window()
+    def create_dump_window(self):
+        """Creates the content of the dump window."""
         selection = self.chat_list.curselection()
         if not selection:
             messagebox.showerror("Selection Error", "No chat selected.")
@@ -251,39 +266,38 @@ class iMessageViewer(tk.Tk):
         chat_id, chat_name, chat_identifier = self.chats[index]
 
         # Get members from the chat (you'll need to implement this based on your database)
-        members = self.collector.get_chat_members(chat_id)  
+        members = self.collector.get_chat_members(chat_id)  # Example, implement this
 
-        dump_dialog = tk.Toplevel(self)
-        dump_dialog.title(f"Dump Messages for {chat_name or chat_identifier}")
+        # Clear any previous content from the dump frame
+        for widget in self.dump_frame.winfo_children():
+            widget.destroy()
 
         # Create a frame for the member selection controls
-        member_frame = tk.Frame(dump_dialog)
+        member_frame = tk.Frame(self.dump_frame)
         member_frame.pack(padx=10, pady=10)
 
-        # Create a listbox to display members
-        member_listbox = tk.Listbox(member_frame, width=30, height=len(members), font=self.custom_font)
+        # Create a listbox to display members with multiple selection mode
+        member_listbox = tk.Listbox(member_frame, width=30, height=len(members), font=self.custom_font, selectmode=tk.MULTIPLE)
         for member in members:
             member_listbox.insert(tk.END, member)
         member_listbox.pack(side=tk.LEFT)
 
-        # Create a frame for the selection buttons
-        button_frame = tk.Frame(member_frame)
-        button_frame.pack(side=tk.RIGHT, padx=10)
-
-        # Create a StringVar to track selected members
-        self.selected_members = StringVar(value="")
-
-        # Create a Radiobutton for each member
-        for member in members:
-            Radiobutton(button_frame, text=member, variable=self.selected_members, value=member, font=self.custom_font).pack(anchor="w")
-
         # Create a button to open the dump file
         def open_dump():
-            # ... (get selected members from self.selected_members and write to dump.txt) ...
-            dump_dialog.destroy()
+            selected_indices = member_listbox.curselection()
+            selected_members = [member_listbox.get(i) for i in selected_indices]
+            if not selected_members:
+                messagebox.showerror("Selection Error", "Please select at least one member.")
+                return
+            self.write_dump_file(chat_id, selected_members)
 
-        open_dump_button = ttk.Button(dump_dialog, text="Open Dump", command=open_dump, style="TButton")
+        open_dump_button = ttk.Button(self.dump_frame, text="Open Dump", command=open_dump, style="TButton")
         open_dump_button.pack(pady=10)
+
+        self.dump_window = self.dump_frame  # Set the dump_window to the frame
+
+        # Show the dump window
+        self.paned_window.add(self.dump_frame, minsize=250)
 
     def analyze_conversation(self):
         """Opens the Google Gemini webpage in the default web browser."""
@@ -491,50 +505,23 @@ class iMessageViewer(tk.Tk):
         self.dump_button = ttk.Button(self.top_bar, text="Dump", command=self.open_dump_dialog, style="TButton")
         self.dump_button.pack(side=tk.LEFT, padx=5)
 
-    def open_dump_dialog(self):
-        """Opens a dialog to select members for the dump file."""
-        selection = self.chat_list.curselection()
-        if not selection:
-            messagebox.showerror("Selection Error", "No chat selected.")
-            return
+    def write_dump_file(self, chat_id, selected_members):
+        """Writes the selected members' messages to a dump file."""
+        messages = self.collector.read_messages(chat_id)
 
-        index = selection[0]
-        chat_id, chat_name, chat_identifier = self.chats[index]
+        try:
+            # Open the dump file for writing
+            with open("dump.txt", "w") as dump_file:
+                for message in messages:
+                    sender = message["phone_number"]
+                    if sender in selected_members:
+                        content = message["body"]
+                        time_sent = message["date"]
+                        dump_file.write(f"{sender}: {content} ({time_sent})\n")
 
-        # Get members from the chat (you'll need to implement this based on your database)
-        members = self.collector.get_chat_members(chat_id)  # Example, implement this
-
-        dump_dialog = tk.Toplevel(self)
-        dump_dialog.title(f"Dump Messages for {chat_name or chat_identifier}")
-
-        # Create a frame for the member selection controls
-        member_frame = tk.Frame(dump_dialog)
-        member_frame.pack(padx=10, pady=10)
-
-        # Create a listbox to display members
-        member_listbox = tk.Listbox(member_frame, width=30, height=len(members), font=self.custom_font)
-        for member in members:
-            member_listbox.insert(tk.END, member)
-        member_listbox.pack(side=tk.LEFT)
-
-        # Create a frame for the selection buttons
-        button_frame = tk.Frame(member_frame)
-        button_frame.pack(side=tk.RIGHT, padx=10)
-
-        # Create a StringVar to track selected members
-        self.selected_members = StringVar(value="")
-
-        # Create a Radiobutton for each member
-        for member in members:
-            Radiobutton(button_frame, text=member, variable=self.selected_members, value=member, font=self.custom_font).pack(anchor="w")
-
-        # Create a button to open the dump file
-        def open_dump():
-            # ... (get selected members from self.selected_members and write to dump.txt) ...
-            dump_dialog.destroy()
-
-        open_dump_button = ttk.Button(dump_dialog, text="Open Dump", command=open_dump, style="TButton")
-        open_dump_button.pack(pady=10)
+            messagebox.showinfo("Dump Successful", "Messages saved to dump.txt")
+        except Exception as e:
+            messagebox.showerror("Dump Error", f"An error occurred while writing to dump.txt: {str(e)}")
 
 
 if __name__ == "__main__":
