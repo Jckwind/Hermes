@@ -151,6 +151,9 @@ class TextCollector:
         members = cursor.fetchall()
         cursor.close()
         
-        # Extract member IDs
-        member_list = [member[0] for member in members]
+        # Load contacts to map phone numbers to names
+        contacts = self.load_contacts()
+        
+        # Extract member IDs and map to contact names
+        member_list = [contacts.get(member[0], member[0]) for member in members]
         return member_list

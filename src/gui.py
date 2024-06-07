@@ -507,21 +507,46 @@ class iMessageViewer(tk.Tk):
 
     def write_dump_file(self, chat_id, selected_members):
         """Writes the selected members' messages to a dump file."""
+        
+
         messages = self.collector.read_messages(chat_id)
+       
+        if not messages:
+            return
+
+        # Create a default filename based on selected members' names
+        members_str = "_".join(selected_members).replace(" ", "_")
+        default_filename = f"{members_str}.dump.txt"
+
+        # Ask the user where to save the file
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            initialfile=default_filename,
+            filetypes=(("Text files", "*.txt"), ("All files", "*.*")),
+        )
+
+        if not file_path:
+            return  # User cancelled the save dialog
 
         try:
             # Open the dump file for writing
-            with open("dump.txt", "w") as dump_file:
+            with open(file_path, "w") as dump_file:
+             
                 for message in messages:
                     sender = message["phone_number"]
-                    if sender in selected_members:
+                    
+                    if sender in selected_members or sender == "Me":
                         content = message["body"]
                         time_sent = message["date"]
                         dump_file.write(f"{sender}: {content} ({time_sent})\n")
+                      
 
-            messagebox.showinfo("Dump Successful", "Messages saved to dump.txt")
+            messagebox.showinfo("Dump Successful", f"Messages saved to {file_path}")
         except Exception as e:
-            messagebox.showerror("Dump Error", f"An error occurred while writing to dump.txt: {str(e)}")
+            messagebox.showerror("Dump Error", f"An error occurred while writing to {file_path}: {str(e)}")
+            
+            
+            
 
 
 if __name__ == "__main__":
