@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox, filedialog, font, ttk, Canvas, Text, Frame, Label
 from pathlib import Path
 import zipfile
-from text_collector import TextCollector
+from TextCollector.text_collector import TextCollector
 import re
 import json
 import webbrowser
@@ -98,7 +98,7 @@ class iMessageViewer(tk.Tk):
         """
         super().__init__()
         self.title('Hermes iMessage Viewer')
-        self.geometry('1200x700')
+        self.geometry('1200x1200')
 
         self.custom_font = font.Font(family="Arial", size=14, weight="bold")
 
@@ -544,10 +544,6 @@ class iMessageViewer(tk.Tk):
             messagebox.showinfo("Dump Successful", f"Messages saved to {file_path}")
         except Exception as e:
             messagebox.showerror("Dump Error", f"An error occurred while writing to {file_path}: {str(e)}")
-            
-            
-            
-
 
 if __name__ == "__main__":
     db_path = Path.home() / "Library" / "Messages" / "chat.db"
