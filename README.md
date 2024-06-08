@@ -1,5 +1,26 @@
 <!-- # Hermes - Encrypted iMessage Extractor and Viewer -->
 
+## Prerequisites
+To set up Text Message Forwarding from your iPhone to your Mac, follow these steps:
+
+1. **Access Settings on iPhone**:
+   - Open `Settings`.
+   - Navigate to `Messages`.
+
+2. **Enable Text Message Forwarding**:
+   - Tap on `Text Message Forwarding`.
+
+3. **Verify Account Consistency**:
+   - **Note**: If you do not see the Text Message Forwarding option, ensure that you are signed in with the same Apple ID on both your iPhone and your Mac.
+
+4. **Select Your Mac**:
+   - Turn on the option for your Mac listed under devices.
+
+5. **Authentication**:
+   - If you are not using two-factor authentication, a six-digit activation code will appear on your Mac.
+   - Enter this code on your iPhone and tap `Allow` to authenticate.
+
+
 ## Overview
 Hermes is a tool designed to securely extract and view iMessages from macOS devices.
 
