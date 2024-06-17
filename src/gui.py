@@ -191,7 +191,7 @@ class iMessageViewer(tk.Tk):
 
         # Export Button
         self.export_button = ttk.Button(
-            self.top_bar, text="Export", command=self.export_chat_and_links, style="TButton"
+            self.top_bar, text="Export", command=self.export_chat, style="TButton"
         )
         self.export_button.pack(side=tk.LEFT, padx=5)
 
@@ -313,11 +313,8 @@ class iMessageViewer(tk.Tk):
         else:
             self.paned_window.add(self.links_frame, minsize=250)
 
-    def export_chat_and_links(self):
-        """
-        Exports the selected chat messages and extracted links to separate .txt files
-        within a .zip archive.
-        """
+    def export_chat(self):
+        """Exports the selected chat messages to a .txt file."""
         selection = self.chat_list.curselection()
         if not selection:
             messagebox.showerror("Selection Error", "No chat selected.")
@@ -326,36 +323,23 @@ class iMessageViewer(tk.Tk):
         index = selection[0]
         chat_id, chat_name, chat_identifier = self.chats[index]
 
-        default_filename = f"{chat_name or chat_identifier}_chat_and_links.zip"
-        zip_path = filedialog.asksaveasfilename(
-            defaultextension=".zip",
+        default_filename = f"{chat_name or chat_identifier}_conversation.txt"
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
             initialfile=default_filename,
-            filetypes=(("ZIP files", "*.zip"), ("all files", "*.*")),
+            filetypes=(("Text files", "*.txt"), ("all files", "*.*")),
         )
 
-        if zip_path:
+        if file_path:
             try:
-                with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+                with open(file_path, "w") as f:
                     messages = self.collector.read_messages(chat_id)
                     export_text = self.format_messages_for_export(messages)
-                    zipf.writestr(f"{chat_id}_chat.txt", export_text)
-
-                    links = []
-                    url_pattern = re.compile(r"https?://\S+")
-                    for message in messages:
-                        links.extend(url_pattern.findall(message["body"]))
-
-                    if links:
-                        export_links_text = "\n".join(set(links))
-                        zipf.writestr(f"{chat_id}_links.txt", export_links_text)
-                    else:
-                        messagebox.showinfo(
-                            "No Links Found", "No links found in the selected chat."
-                        )
+                    f.write(export_text)
 
                 messagebox.showinfo(
                     "Export Successful",
-                    f"Chat and links from {chat_name or chat_identifier} exported to {zip_path}",
+                    f"Chat from {chat_name or chat_identifier} exported to {file_path}",
                 )
             except Exception as e:
                 messagebox.showerror(
