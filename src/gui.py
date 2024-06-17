@@ -234,6 +234,22 @@ class iMessageViewer(tk.Tk):
         self.paned_window.add(self.chat_list, minsize=250)
         self.paned_window.add(self.message_frame, minsize=550)
 
+
+        # Sort Order Buttons
+        self.sort_frame = tk.Frame(self.top_bar)
+        self.sort_frame.pack(side=tk.LEFT, fill=tk.X)
+
+        self.sort_var = tk.StringVar(value="soonest")  # Default to "soonest"
+        self.soonest_button = ttk.Radiobutton(
+            self.sort_frame, text="Soonest", variable=self.sort_var, value="soonest", command=self.display_messages, style="TButton"
+        )
+        self.soonest_button.pack(side=tk.LEFT, padx=5)
+
+        self.earliest_button = ttk.Radiobutton(
+            self.sort_frame, text="Earliest", variable=self.sort_var, value="earliest", command=self.display_messages, style="TButton"
+        )
+        self.earliest_button.pack(side=tk.LEFT, padx=5)
+       
         # Dump Button (replaces Export Button)
         self.dump_button = ttk.Button(self.top_bar, text="Dump", command=self.toggle_dump_window, style="TButton")
         self.dump_button.pack(side=tk.LEFT, padx=5)
@@ -374,7 +390,7 @@ class iMessageViewer(tk.Tk):
         self.chats = self.collector.get_all_chat_ids_with_labels()
         self.filter_chats()
 
-    def display_messages(self, event):
+    def display_messages(self, event=None):
         """
         Displays messages of the selected chat and extracts links, making them clickable.
         """
@@ -386,51 +402,67 @@ class iMessageViewer(tk.Tk):
         chat_id, chat_name, chat_identifier = self.chats[index]
         messages = self.collector.read_messages(chat_id)
 
-        # Clear previous messages from a different conversation
+        # --- Clear previous messages from a different conversation ---
         for widget in self.message_frame.winfo_children():
             widget.destroy()
 
+        # --- Extract Links and Update Links Area ---
         self.links_text.configure(state=tk.NORMAL)
         self.links_text.delete("1.0", tk.END)
         url_pattern = re.compile(r"https?://\S+")
         links = set()
+        for message in messages:
+            content = message["body"]
+            message_links = url_pattern.findall(content)
+            links.update(message_links)
 
-        # --- Create Scrollbar (outside the canvas) ---
+        for link in links:
+            self.links_text.insert(tk.END, "- " + link + "\n", "link")
+            self.links_text.tag_bind(
+                "link", "<Button-1>", lambda e, url=link: self.click_link(url)
+            )
+
+        self.links_text.configure(state=tk.DISABLED)
+
+        # --- Sort Messages Based on Selected Option ---
+        sort_order = self.sort_var.get()
+        if sort_order == "earliest":
+            messages = sorted(messages, key=lambda x: x["date"])
+        else:
+            messages = sorted(messages, key=lambda x: x["date"], reverse=True)
+
+        # --- Create Scrollbar ---
         self.scrollbar = tk.Scrollbar(self.message_frame, orient="vertical")
         self.scrollbar.pack(side="right", fill="y")
 
-        # --- Create Message Canvas (with scrollbar tied to it) ---
+        # --- Create Message Canvas ---
         self.message_canvas = Canvas(
             self.message_frame, width=600, height=400, bg="grey5"
         )
         self.message_canvas.pack(side="left", fill="both", expand=True)
         self.message_canvas.config(yscrollcommand=self.scrollbar.set)
-
         self.scrollbar.config(command=self.message_canvas.yview)
 
         # --- Insert Messages with Canvas Bubbles ---
-        y_offset = 10  # Initial vertical offset
-        message_height = 30  # Approximate height of a message
+        y_offset = 10
+        message_height = 30
         bubbles = []  # List to store BotBubble objects
 
         for message in messages:
             sender = message["phone_number"]
             content = message["body"]
             time_sent = message["date"]
-            message_links = url_pattern.findall(content)
-            links.update(message_links)
 
             # Determine the bubble tag based on sender
             if sender == "Me":
                 bubble_color = "lightblue"
-                bubble_x = self.message_canvas.winfo_width() - 110  # Adjust the X-coordinate for right alignment
-                bubble_anchor = "ne"  # Top-right alignment
+                bubble_x = self.message_canvas.winfo_width() - 110
+                bubble_anchor = "ne"
             else:
                 bubble_color = "lightgray"
-                bubble_x = 10  # Default X-coordinate for left alignment
-                bubble_anchor = "nw"  # Top-left alignment
+                bubble_x = 10
+                bubble_anchor = "nw"
 
-            # Create a BotBubble object (passing is_user flag)
             bubble = BotBubble(
                 self.message_canvas, sender, content, bubble_color, y_offset, False
             )
@@ -440,22 +472,11 @@ class iMessageViewer(tk.Tk):
             self.message_canvas.create_window(
                 bubble_x, y_offset, anchor=bubble_anchor, window=bubble.frame
             )
-            # Update the vertical offset for the next message
-            y_offset += bubble.height + 10  # Add space between messages
 
-        # --- Handle Links ---
-        for link in links:
-            self.links_text.insert(tk.END, "- " + link + "\n", "link")
-            self.links_text.tag_bind(
-                "link", "<Button-1>", lambda e, url=link: self.click_link(url)
-            )
+            y_offset += bubble.height + 10
 
-        self.links_text.configure(state=tk.DISABLED)
-
-        # --- Update Canvas Height ---
-        self.message_canvas.config(height=y_offset)  # Update height based on y_offset
-
-        # --- Enable Scrolling ---
+        # --- Update Canvas Height and Enable Scrolling ---
+        self.message_canvas.config(height=y_offset)
         self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
 
     def click_link(self, url):
@@ -491,8 +512,6 @@ class iMessageViewer(tk.Tk):
 
     def write_dump_file(self, chat_id, selected_members):
         """Writes the selected members' messages to a dump file."""
-        
-
         messages = self.collector.read_messages(chat_id)
        
         if not messages:
