@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, filedialog, font, ttk, Canvas, Text, Frame, Label
+from tkinter import messagebox, filedialog, font, ttk, Canvas, Text, Frame, Label, Entry
 from pathlib import Path
 import zipfile
 from TextCollector.text_collector import TextCollector
@@ -120,6 +120,8 @@ class iMessageViewer(tk.Tk):
 
         self.dump_window = None  # Initialize dump window to None
 
+        self.links_displayed = set()  # Keep track of displayed links
+
     def load_intro_decision(self):
         """Loads the "Do not show again" decision from a configuration file."""
         config_file = Path(__file__).parent / ".hermes_config.json"  # Use the script's directory
@@ -234,6 +236,10 @@ class iMessageViewer(tk.Tk):
         self.paned_window.add(self.chat_list, minsize=250)
         self.paned_window.add(self.message_frame, minsize=550)
 
+        # Search bar for links
+        self.links_search_bar = tk.Entry(self.links_frame, font=self.custom_font)
+        self.links_search_bar.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
+        self.links_search_bar.bind("<KeyRelease>", self.filter_links)  # Bind to KeyRelease event
 
         # Sort Order Buttons
         self.sort_frame = tk.Frame(self.top_bar)
@@ -326,8 +332,11 @@ class iMessageViewer(tk.Tk):
         """
         if self.links_frame.winfo_ismapped():
             self.paned_window.forget(self.links_frame)
+            self.links_displayed = set()  # Clear displayed links when hiding
+            self.links_search_bar.delete(0, tk.END)  # Clear search bar
         else:
             self.paned_window.add(self.links_frame, minsize=250)
+            self.display_links()
 
     def export_chat(self):
         """Exports the selected chat messages to a .txt file."""
@@ -416,12 +425,6 @@ class iMessageViewer(tk.Tk):
             message_links = url_pattern.findall(content)
             links.update(message_links)
 
-        for link in links:
-            self.links_text.insert(tk.END, "- " + link + "\n", "link")
-            self.links_text.tag_bind(
-                "link", "<Button-1>", lambda e, url=link: self.click_link(url)
-            )
-
         self.links_text.configure(state=tk.DISABLED)
 
         # --- Sort Messages Based on Selected Option ---
@@ -482,33 +485,41 @@ class iMessageViewer(tk.Tk):
     def click_link(self, url):
         """Opens the provided URL in the default web browser."""
         webbrowser.open(url)
-    # Main Content
-        self.paned_window = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, width=50)
-        self.paned_window.pack(fill=tk.BOTH, expand=True)
 
-        # Imessage Window
-        self.chat_list = tk.Listbox(self.paned_window, width=40, height=20, font=self.custom_font)
-        self.chat_list.bind('<<ListboxSelect>>', self.display_messages)
-        self.chat_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    def display_links(self):
+        """Displays links extracted from the selected chat."""
+        selection = self.chat_list.curselection()
+        if not selection:
+            return
 
-        # Message area
-        self.message_frame = tk.Frame(self.paned_window)
-        self.message_canvas = tk.Canvas(self.message_frame, width=600, height=400, bg="lightgray")
-        self.message_canvas.pack(fill=tk.BOTH, expand=True)
+        index = selection[0]
+        chat_id, _, _ = self.chats[index]
+        messages = self.collector.read_messages(chat_id)
 
-        # Links area (initially hidden)
-        self.links_frame = tk.Frame(self.paned_window)
-        self.links_text = tk.Text(self.links_frame, wrap=tk.WORD, font=self.custom_font, cursor="arrow", state=tk.DISABLED)
-        self.links_text.tag_configure("link", foreground="white", underline=True, background="blue")
-        self.links_text.pack(fill=tk.BOTH, expand=True)
+        url_pattern = re.compile(r"https?://\S+")
+        self.links_displayed = set()  # Reset displayed links
 
-        # Add chat list and message area to the paned window
-        self.paned_window.add(self.chat_list, minsize=250)
-        self.paned_window.add(self.message_frame, minsize=550)
+        for message in messages:
+            content = message["body"]
+            message_links = url_pattern.findall(content)
+            self.links_displayed.update(message_links)
 
-        # Dump Button (replaces Export Button)
-        self.dump_button = ttk.Button(self.top_bar, text="Dump", command=self.open_dump_dialog, style="TButton")
-        self.dump_button.pack(side=tk.LEFT, padx=5)
+        self.filter_links()  # Display initially based on the current search term
+
+    def filter_links(self, event=None):
+        """Filters the displayed links based on the search term."""
+        search_term = self.links_search_bar.get().lower()
+        self.links_text.configure(state=tk.NORMAL)
+        self.links_text.delete("1.0", tk.END)
+
+        for link in self.links_displayed:
+            if search_term in link.lower():
+                self.links_text.insert(tk.END, "- " + link + "\n", "link")
+                self.links_text.tag_bind(
+                    "link", "<Button-1>", lambda e, url=link: self.click_link(url)
+                )
+
+        self.links_text.configure(state=tk.DISABLED)
 
     def write_dump_file(self, chat_id, selected_members):
         """Writes the selected members' messages to a dump file."""
