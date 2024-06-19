@@ -229,7 +229,7 @@ class iMessageViewer(tk.Tk):
         # Links area (initially hidden)
         self.links_frame = tk.Frame(self.paned_window)
         self.links_text = tk.Text(self.links_frame, wrap=tk.WORD, font=self.custom_font, cursor="arrow", state=tk.DISABLED)
-        self.links_text.tag_configure("link", foreground="white", underline=True, background="blue")
+        self.links_text.tag_configure("link", foreground="white", underline=True, background="grey5")
         self.links_text.pack(fill=tk.BOTH, expand=True)
 
         # Add chat list and message area to the paned window
