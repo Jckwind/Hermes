@@ -482,6 +482,18 @@ class iMessageViewer(tk.Tk):
         self.message_canvas.config(height=y_offset)
         self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
 
+        # --- Mousewheel Scrolling ---
+        self.message_canvas.bind_all("<MouseWheel>", self.on_mousewheel)  # Windows and MacOS
+        self.message_canvas.bind_all("<Button-4>", self.on_mousewheel)    # Linux
+        self.message_canvas.bind_all("<Button-5>", self.on_mousewheel)    # Linux
+
+    def on_mousewheel(self, event):
+        """Handles mousewheel scrolling on the message canvas."""
+        if event.num == 5 or event.delta < 0:
+            self.message_canvas.yview_scroll(1, "units")
+        elif event.num == 4 or event.delta > 0:
+            self.message_canvas.yview_scroll(-1, "units")
+
     def click_link(self, url):
         """Opens the provided URL in the default web browser."""
         webbrowser.open(url)
