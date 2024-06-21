@@ -240,6 +240,10 @@ class iMessageViewer(tk.Tk):
         self.links_search_bar.pack(side=tk.TOP, fill=tk.X, expand=True, padx=5, pady=5)
         self.links_search_bar.bind("<KeyRelease>", self.filter_links)  # Bind to KeyRelease event
 
+        # Export Links Button
+        self.export_links_button = ttk.Button(self.links_frame, text="Export Links", command=self.export_links, style="TButton")
+        self.export_links_button.pack(side=tk.TOP, padx=5, pady=5)
+
         # Sort Order Buttons
         self.sort_frame = tk.Frame(self.top_bar)
         self.sort_frame.pack(side=tk.LEFT, fill=tk.X)
@@ -303,9 +307,6 @@ class iMessageViewer(tk.Tk):
             member_listbox.insert(tk.END, member)
         member_listbox.pack(side=tk.LEFT)
         member_listbox.select_set(0, tk.END)
-        
-    
-        
         # Create a button to open the dump file
         def open_dump():
             selected_indices = member_listbox.curselection()
@@ -530,6 +531,32 @@ class iMessageViewer(tk.Tk):
                 )
 
         self.links_text.configure(state=tk.DISABLED)
+
+    def export_links(self):
+        """Exports the links displayed in the links window to a .txt file."""
+        links = self.links_text.get("1.0", tk.END).strip().split("\n")
+        if not links:
+            messagebox.showerror("Export Error", "No links to export.")
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            initialfile="links.txt",
+            filetypes=(("Text files", "*.txt"), ("All files", "*.*")),
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "w") as f:
+                    for link in links:
+                        # Remove the leading hyphen and strip any whitespace
+                        clean_link = link.lstrip("- ").strip()
+                        if clean_link:  # Only write non-empty links
+                            f.write(clean_link + "\n")
+
+                messagebox.showinfo("Export Successful", f"Links exported to {file_path}")
+            except Exception as e:
+                messagebox.showerror("Export Error", f"An error occurred during export: {str(e)}")
 
     def write_dump_file(self, chat_id, selected_members):
         """Writes the selected members' messages to a dump file."""

@@ -2,7 +2,7 @@ import sqlite3
 import datetime
 from typing import List, Dict, Union
 from glob import glob
-import re  # Add this import at the top of your file if not already present
+import re  
 
 class TextCollector:
     def __init__(self, db_path: str):
