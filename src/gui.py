@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox, filedialog, font, ttk, Canvas, Text, Frame, Label, Entry
 from pathlib import Path
-import zipfile
 from TextCollector.text_collector import TextCollector
 import re
 import json
@@ -303,7 +302,10 @@ class iMessageViewer(tk.Tk):
         for member in members:
             member_listbox.insert(tk.END, member)
         member_listbox.pack(side=tk.LEFT)
-
+        member_listbox.select_set(0, tk.END)
+        
+    
+        
         # Create a button to open the dump file
         def open_dump():
             selected_indices = member_listbox.curselection()
@@ -315,10 +317,6 @@ class iMessageViewer(tk.Tk):
 
         open_dump_button = ttk.Button(self.dump_frame, text="Open Dump", command=open_dump, style="TButton")
         open_dump_button.pack(pady=10)
-
-        self.dump_window = self.dump_frame  # Set the dump_window to the frame
-
-        # Show the dump window
         self.paned_window.add(self.dump_frame, minsize=250)
 
     def analyze_conversation(self):
