@@ -9,9 +9,13 @@ import json
 import time
 from pathlib import Path
 from typing import Dict, Optional
+import os
 
 import requests
 
+
+
+API_KEY = os.environ.get('GUMLOOP_API_KEY')
 # Constants
 API_BASE_URL = "https://api.gumloop.com/api/v1"
 START_PIPELINE_ENDPOINT = f"{API_BASE_URL}/start_pipeline"
