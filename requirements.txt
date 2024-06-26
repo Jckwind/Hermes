@@ -1,3 +1,5 @@
 cryptography
 google-generativeai
 pyinstaller
+ttkthemes
+tkinter

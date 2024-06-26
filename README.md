@@ -1,6 +1,37 @@
-<!-- # Hermes - Encrypted iMessage Extractor and Viewer -->
+# Hermes - Encrypted iMessage Extractor and Viewer
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python Version](https://img.shields.io/badge/python-3.x-green.svg)
+
+## Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
+- [Changelog](#changelog)
+- [License](#license)
+- [Contact](#contact)
+
+## Overview
+Hermes is a powerful tool designed to securely extract and view iMessages from macOS devices. It provides a user-friendly interface for accessing and managing your iMessage data, ensuring privacy and ease of use.
+
+![Hermes Screenshot](path/to/screenshot.png)
+
+## Features
+- **GUI Viewer**: Intuitive interface for browsing and searching messages
+- **Secure Extraction**: Safely extract iMessages from macOS devices
+- **Export Functionality**: Export conversations or selected messages
+- **Multi-device Support**: Compatible with iPhone and Mac synchronization
 
 ## Prerequisites
+- macOS device with iMessages enabled
+- Python 3.x
+- Homebrew (for easy Python installation)
+
 To set up Text Message Forwarding from your iPhone to your Mac, follow these steps:
 
 1. **Access Settings on iPhone**:
@@ -20,16 +51,12 @@ To set up Text Message Forwarding from your iPhone to your Mac, follow these ste
    - If you are not using two-factor authentication, a six-digit activation code will appear on your Mac.
    - Enter this code on your iPhone and tap `Allow` to authenticate.
 
-
-## Overview
-Hermes is a tool designed to securely extract and view iMessages from macOS devices.
-
 ## Installation
-Conda is an open-source package management and environment management system. It functions like a library, where you can easily access and manage collections of books (or in this case, software packages) without conflicts.
+Conda is an open-source package management and environment management system. It functions like a library, where you can easily access and manage collections of software packages without conflicts.
 
 ### Installing Python with Homebrew
 
-1. **Install Homebrew**: 
+1. **Install Homebrew**:
    If you do not have Homebrew installed, run this line in your terminal:
    ```
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -90,49 +117,27 @@ Conda is an open-source package management and environment management system. It
 
    This will install all necessary Python packages specified in `requirements.txt` and then start the GUI application using the Python version installed via Homebrew.
 
-## Features
-- **GUI Viewer**: View messages through a user-friendly interface.
-
-### Prerequisites
-- Python 3.x
-- Access to macOS with iMessages
-
-### Setup
-1. Clone this repository:
-   ```
-   git clone https://github.com/yourusername/Hermes.git
-   ```
-
-2. Navigate to the Hermes directory:
-   ```
-   cd Hermes
-   ```
-
-
-
-3. Install required Python packages:
-   ```
-   pip install -r requirements.txt
-   ```
-
-
-4. Before Running the Application 
-    To ensure the Cursor IDE functions correctly, it requires Full Disk Access. This access allows the program to retrieve data from your iMessages. Please follow these steps to grant the necessary permissions:
-
-        - Open the Settings app from your applications folder.
-        - Navigate to Privacy and Security.
-        - Scroll to Full Disk Access and click to open it.
-        - Locate the Cursor IDE in the list and check the box to grant it permission.
-
-
 ## Usage
-Run the `gui.py` from the src directory:
+1. **Launch the Application**:
+   Run the `gui.py` script from the `src` directory to start the Hermes application.
 
-```
-python src/gui.py
-```
+2. **Select a Conversation**:
+   The left panel displays a list of your iMessage conversations. Click on a conversation to view its messages.
 
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+3. **View Messages**:
+   The main panel shows the messages for the selected conversation. You can scroll through the messages and view their contents, including text, images, and attachments.
 
+4. **Search Messages**:
+   Use the search bar at the top to search for specific keywords or phrases within the selected conversation. The messages will be filtered based on your search query.
 
+5. **Export Messages**:
+   To export messages from a conversation, click on the "Export" button. You can choose to export the entire conversation or select specific messages to export. The exported messages will be saved to a file in a chosen location.
+
+6. **Dump Messages**:
+   The "Dump" feature allows you to save all messages from selected participants in a conversation to a separate file. Select the desired participants from the dropdown menu and click "Dump" to generate the file.
+
+7. **Quit the Application**:
+   To exit Hermes, simply close the application window or select "Quit" from the application menu.
+
+## Project Structure
+The project is structured as follows:
