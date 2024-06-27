@@ -9,15 +9,18 @@ class MessageBubble:
         Initializes a MessageBubble object.
 
         Args:
-            master (tk.Canvas): The canvas to draw the bubble on.
+            master (tk.Widget): The parent widget (preferably a Canvas).
             sender (str): The sender of the message.
             message (str): The message content.
             bubble_color (str): The color of the bubble.
             y_offset (int): The vertical offset of the bubble.
             is_user (bool): Whether the message is from the user.
         """
-        self.master = master
-        self.frame = Frame(master, bg=bubble_color)
+        self.master = self.find_canvas_parent(master)
+        if not self.master:
+            raise ValueError("MessageBubble requires a Canvas or a widget with a Canvas parent")
+
+        self.frame = Frame(self.master, bg=bubble_color)
         self.i = self.master.create_window(10, y_offset, anchor="nw", window=self.frame)
 
         Label(self.frame, text=sender, font=("Helvetica", 20, "italic"), bg=bubble_color).grid(
@@ -25,7 +28,7 @@ class MessageBubble:
         )
 
         # Split message into lines if it exceeds 200 units
-        wrapped_message = self.wrapText(message, 100)
+        wrapped_message = self.wrap_text(message, 100)
 
         # Right-align user's messages, otherwise left align
         if is_user:
@@ -51,28 +54,33 @@ class MessageBubble:
             self.master.bbox(self.i)[3] - self.master.bbox(self.i)[1]
         )  # Calculate height after creation
 
-    def wrapText(self, text, maxLength):
-        """Wraps text to a new line if it exceeds the maxLength."""
+    def find_canvas_parent(self, widget):
+        """Recursively search for a Canvas parent"""
+        if widget is None:
+            return None
+        if isinstance(widget, tk.Canvas):
+            return widget
+        return self.find_canvas_parent(widget.master)
+
+    def wrap_text(self, text, max_length):
+        """Wraps text to a new line if it exceeds the max_length."""
         words = text.split()
         lines = []
-        currentLine = ""
+        current_line = ""
 
         for word in words:
-            if len(currentLine) + len(word) + 1 > maxLength:
-                lines.append(currentLine)
-                currentLine = word
+            if len(current_line) + len(word) + 1 > max_length:
+                lines.append(current_line)
+                current_line = word
             else:
-                if currentLine:
-                    currentLine += " " + word
-                else:
-                    currentLine = word
+                current_line += " " + word if current_line else word
 
-        if currentLine:
-            lines.append(currentLine)
+        if current_line:
+            lines.append(current_line)
 
         return "\n".join(lines)
 
-    def drawTriangle(self, widget):
+    def draw_triangle(self):
         """Draws a triangle pointing towards the message bubble."""
-        x1, y1, x2, y2 = self.master.bbox(widget)
-        return x1, y2 - 10, x1 - 15, y2 + 10, x1, y2
+        x1, y1, x2, y2 = self.master.bbox(self.i)
+        return self.master.create_polygon(x1, y2 - 10, x1 - 15, y2 + 10, x1, y2, fill=self.frame.cget("bg"))
