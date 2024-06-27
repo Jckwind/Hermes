@@ -1,10 +1,10 @@
 """Module for collecting and managing text messages from a SQLite database."""
 
 import sqlite3
-import datetime
 import logging
 from typing import List, Dict, Optional
 from .chat import Chat
+from .message import Message
 from ..contacts_collection.contact import Contact
 
 class TextCollector:
@@ -54,15 +54,7 @@ class TextCollector:
                 enriched_chats = self._enrich_chats_with_contacts(chats, contacts_cache)
                 self.chat_cache = {
                     chat.chat_name: chat
-                    for chat in [
-                        Chat(
-                            chat_id=chat_id,
-                            display_name=display_name,
-                            chat_identifier=chat_identifier,
-                            members=self.get_chat_members(chat_id, contacts_cache)
-                        )
-                        for chat_id, display_name, chat_identifier in enriched_chats
-                    ]
+                    for chat in enriched_chats
                 }
             return list(self.chat_cache.values())
         except sqlite3.Error as e:
@@ -89,20 +81,32 @@ class TextCollector:
             """)
             return cursor.fetchall()
 
-    def _enrich_chats_with_contacts(self, chats: List[tuple], contacts_cache: Dict[str, Contact]) -> List[tuple]:
-        """Enrich chat data with contact information.
+    def _enrich_chats_with_contacts(self, chats: List[tuple], contacts_cache: Dict[str, Contact]) -> List[Chat]:
+        """Enrich chat data with contact information and return Chat objects.
 
         Args:
             chats: A list of tuples containing chat information.
             contacts_cache: A dictionary of contacts, keyed by phone number.
 
         Returns:
-            A list of tuples with enriched chat information.
+            A list of Chat objects with enriched chat information.
         """
-        return [
-            (chat_id, contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=display_name)).name if display_name == '' else display_name, chat_identifier)
-            for chat_id, display_name, chat_identifier in chats
-        ]
+        enriched_chats = []
+        for chat_id, display_name, chat_identifier in chats:
+            if display_name == '':
+                # If display_name is empty, try to get the name from contacts_cache
+                contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
+                display_name = contact.name
+
+            members = self.get_chat_members(chat_id, contacts_cache)
+            enriched_chats.append(Chat(
+                chat_id=chat_id,
+                display_name=display_name,
+                chat_identifier=chat_identifier,
+                members=members
+            ))
+
+        return enriched_chats
 
     def _log_database_error(self, error: sqlite3.Error) -> None:
         """Log database errors.
@@ -112,93 +116,78 @@ class TextCollector:
         """
         logging.error("Database error occurred: %s", error)
 
-    def read_messages(self, chat_id: int, contacts_cache: Dict[str, Contact], self_number: str = 'Me', human_readable_date: bool = True) -> List[Dict[str, str]]:
+    def read_messages(self, chat_id: int, contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
         """Read messages for a specific chat.
 
         Args:
             chat_id: The ID of the chat to read messages from.
             contacts_cache: A dictionary of contacts, keyed by phone number.
             self_number: The identifier for the user's own messages. Defaults to 'Me'.
-            human_readable_date: Whether to format dates as human-readable. Defaults to True.
 
         Returns:
-            A list of dictionaries containing message details.
+            A list of Message objects containing message details.
 
         Raises:
             sqlite3.Error: If a database error occurs.
         """
         try:
-            with self.conn:
-                cursor = self.conn.cursor()
-                query = """
-                SELECT message.ROWID, message.date, message.text, message.attributedBody, handle.id, message.is_from_me, message.cache_has_attachments
-                FROM message
-                LEFT JOIN handle ON message.handle_id = handle.ROWID
-                WHERE message.ROWID IN (SELECT message_id FROM chat_message_join WHERE chat_id = ?)
-                ORDER BY message.date
-                """
-                cursor.execute(query, (chat_id,))
-                results = cursor.fetchall()
-
-            messages = []
-            for result in results:
-                rowid, date, text, attributed_body, handle_id, is_from_me, cache_has_attachments = result
-                phone_number = self_number if is_from_me else contacts_cache.get(handle_id, Contact(phone_number=handle_id, name=handle_id)).name
-
-                body = self.extract_message_body(text, attributed_body)
-                date = self.format_time(date) if human_readable_date else date
-
-                if phone_number:
-                    messages.append({"date": date, "body": body, "phone_number": phone_number})
-
-            return messages
+            results = self._fetch_messages_from_database(chat_id)
+            return self._process_message_results(results, contacts_cache, self_contact)
         except sqlite3.Error as e:
-            logging.error("Error reading messages: %s", e)
+            self._log_database_error(e)
             raise
 
-    def extract_message_body(self, text: str, attributed_body: bytes) -> str:
-        """Extract the message body from either text or attributed body.
+    def _fetch_messages_from_database(self, chat_id: int) -> List[tuple]:
+        """Fetch raw message data from the database.
 
         Args:
-            text: The text of the message.
-            attributed_body: The attributed body of the message.
+            chat_id: The ID of the chat to fetch messages for.
 
         Returns:
-            The extracted message body.
+            A list of tuples containing raw message data.
+
+        Raises:
+            sqlite3.Error: If a database error occurs.
         """
-        if text:
-            return text
+        query = """
+        SELECT message.ROWID, message.date, message.text, message.attributedBody,
+               handle.id, message.is_from_me, message.cache_has_attachments
+        FROM message
+        LEFT JOIN handle ON message.handle_id = handle.ROWID
+        WHERE message.ROWID IN (SELECT message_id FROM chat_message_join WHERE chat_id = ?)
+        ORDER BY message.date
+        """
+        with self.conn:
+            cursor = self.conn.cursor()
+            cursor.execute(query, (chat_id,))
+            return cursor.fetchall()
 
-        if attributed_body:
-            try:
-                decoded_body = attributed_body.split(b"NSString")[1]
-                text = decoded_body[5:]
-                if text[0] == 129:
-                    length = int.from_bytes(text[1:3], "little")
-                    text = text[3:length+3]
-                else:
-                    length = text[0]
-                    text = text[1:length+1]
-                return text.decode()
-            except (IndexError, UnicodeDecodeError) as e:
-                logging.error("Error extracting message body: %s", e)
-                return ""
-
-        return ""
-
-    def format_time(self, time_sent: int) -> str:
-        """Format a timestamp into a human-readable date string.
+    def _process_message_results(self, results: List[tuple], contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
+        """Process raw message data into Message objects.
 
         Args:
-            time_sent: The timestamp to format.
+            results: A list of tuples containing raw message data.
+            contacts_cache: A dictionary of contacts, keyed by phone number.
+            self_number: The identifier for the user's own messages.
 
         Returns:
-            A formatted date string.
+            A list of Message objects.
         """
-        apple_epoch = datetime.datetime(2001, 1, 1)
-        time_sent_seconds = time_sent / 1_000_000_000
-        time_sent_datetime = apple_epoch + datetime.timedelta(seconds=time_sent_seconds)
-        return time_sent_datetime.strftime('%Y-%m-%d %H:%M')
+        messages = []
+        for result in results:
+            message = Message.fromDatabaseResult(result, self_contact)
+            if not message.isFromMe:
+                message.sender = contacts_cache.get(message.sender.phone_number, message.sender)
+            messages.append(message)
+        return messages
+
+    def _log_database_error(self, error: sqlite3.Error) -> None:
+        """Log database errors.
+
+        Args:
+            error: The SQLite error to log.
+        """
+        logging.error("Database error occurred: %s", error)
 
     def get_chat_members(self, chat_id: int, contacts_cache: Dict[str, Contact]) -> List[Contact]:
         """Get the members of a specific chat.

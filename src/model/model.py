@@ -1,6 +1,11 @@
+from typing import List
 from .text_collection.text_collector import TextCollector
 from .text_collection.chat import Chat
+from .text_collection.message import Message
 from .contacts_collection.contacts import ContactsCollector
+from .contacts_collection.contact import Contact
+import json
+from pathlib import Path
 
 class Model:
     """Model class for the Hermes iMessage Viewer application.
@@ -11,6 +16,7 @@ class Model:
     Attributes:
         text_collector: An instance of TextCollector for managing text messages.
         contacts_collector: An instance of ContactsCollector for managing contacts.
+        self_contact: The contact for the current user.
     """
 
     def __init__(self, db_path: str):
@@ -21,6 +27,14 @@ class Model:
         """
         self.text_collector = TextCollector(db_path)
         self.contacts_collector = ContactsCollector()
+        # Read self contact information from .hermes_config.json
+        config_path = Path(__file__).parent.parent / ".hermes_config.json"
+        with open(config_path, "r") as configFile:
+            config = json.load(configFile)
+            self_phone_number = config["self"]["phone_number"]
+            self_name = config["self"]["name"]
+            self.self_contact = Contact(phone_number=self_phone_number, name=self_name)
+        # Load all contacts
         self.load_contacts()
 
     def get_chats(self) -> list[Chat]:
@@ -33,7 +47,7 @@ class Model:
         return self.text_collector.get_all_chat_ids_with_labels(
             self.contacts_collector.contacts_cache)
 
-    def get_messages(self, chat_id: int) -> list:
+    def get_messages(self, chat_id: int) -> List[Message]:
         """Read messages for a specific chat.
 
         Args:
@@ -43,9 +57,12 @@ class Model:
             A list of dictionaries containing message details.
         """
         return self.text_collector.read_messages(
-            chat_id, self.contacts_collector.contacts_cache)
+            chat_id,
+            self.contacts_collector.contacts_cache,
+            self.self_contact
+        )
 
-    def get_chat_members(self, chat_id: int) -> list:
+    def get_chat_members(self, chat_id: int) -> List[Contact]:
         """Get the members of a specific chat.
 
         Args:

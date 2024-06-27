@@ -1,1 +1,7 @@
-{"show_intro": true}
+{
+    "show_intro": false,
+    "self": {
+        "phone_number": "+13025353508",
+        "name": "Jack Wind"
+    }
+}

@@ -1,15 +1,15 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 from pathlib import Path
 import json
 import logging
 from ttkthemes import ThemedTk
 from typing import List, Dict, Any
 from model.text_collection.chat import Chat
+from model.text_collection.message import Message
 from view.components.toolbar import Toolbar
 from view.components.message_bubble import MessageBubble
 from view.components.welcome_message import WelcomeMessage
-
 
 class View(ThemedTk):
     """Main GUI class for Hermes iMessage Viewer."""
@@ -126,12 +126,11 @@ class View(ThemedTk):
             self.chat_listbox.insert(tk.END, display_text)
         self.chat_listbox.update_idletasks()
 
-    def display_messages(self, messages: List[Dict[str, Any]]):
+    def display_messages(self, messages: List[Message]):
         """Display messages for the selected chat."""
         self.threadsafe_call(self._display_messages, messages)
-      
 
-    def _display_messages(self, messages: List[Dict[str, Any]]):
+    def _display_messages(self, messages: List[Message]):
         for widget in self.message_inner_frame.winfo_children():
             widget.destroy()
 
@@ -142,26 +141,10 @@ class View(ThemedTk):
         self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
         self.message_canvas.yview_moveto(1.0)  # Scroll to the bottom
 
-    
-
-    def create_message_item(self, message: Dict[str, Any]):
+    def create_message_item(self, message: Message):
         """Create a single message item widget using MessageBubble."""
-        # Print all string values in the message dictionary
-        for key, value in message.items():
-            if isinstance(value, str):
-                print(f"{key}: {value}")
-        is_from_me = message['phone_number'] == 'Me'  # Changed condition
-        bubble_color = '#3d3d3d' if is_from_me else '#1c1c1c'  # Adjust colors as needed
-        message_bubble = MessageBubble(
-            self.message_inner_frame,
-            sender=message['phone_number'],
-            message=message['body'],
-            bubble_color=bubble_color,
-            y_offset=0,
-            is_user=is_from_me
-        )
-       
-        message_bubble.pack(fill=tk.X, padx=10, pady=5, anchor='e' if is_from_me else 'w')
+        message_bubble = MessageBubble(self.message_inner_frame, message, 0)
+        # message_bubble.pack(fill=tk.X, padx=10, pady=5, anchor='e' if message.isFromMe else 'w')
 
     def on_message_canvas_configure(self, event):
         """Handle message canvas configuration event."""
@@ -170,7 +153,7 @@ class View(ThemedTk):
 
     def load_intro_decision(self):
         """Load user's decision about showing the intro window."""
-        config_file = Path(__file__).parent / ".hermes_config.json"
+        config_file = Path(__file__).parent.parent / ".hermes_config.json"
         if config_file.exists():
             try:
                 with open(config_file, "r") as f:
@@ -184,32 +167,12 @@ class View(ThemedTk):
         self.threadsafe_call(self._show_introduction_window)
 
     def _show_introduction_window(self):
-        intro_window = tk.Toplevel(self)
-        intro_window.title("Welcome to Hermes iMessage Viewer")
-
-        welcome_message = WelcomeMessage(intro_window)
-        welcome_message.pack(padx=20, pady=20)
-
-        self.dont_show_again_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(intro_window, text="Do not show this again", variable=self.dont_show_again_var).pack(pady=10)
-
-        ttk.Button(intro_window, text="Close", command=lambda: self.close_intro_window(intro_window)).pack(pady=10)
-
-    def close_intro_window(self, window):
-        """Close the introduction window and save user's decision."""
-        self.show_intro = not self.dont_show_again_var.get()
-        self.save_intro_decision()
-        window.destroy()
-
-    def save_intro_decision(self):
-        """Save user's decision about showing the intro window."""
-        config_file = Path(__file__).parent / ".hermes_config.json"
-        try:
-            with open(config_file, "w") as f:
-                json.dump({"show_intro": self.show_intro}, f)
-        except Exception as e:
-            logging.error(f"Error saving intro decision: {e}")
-            self.threadsafe_call(messagebox.showerror, "Error", "Failed to save your preference. Please try again.")
+        config_file = Path(__file__).parent.parent / ".hermes_config.json"
+        welcome_message = WelcomeMessage(self, config_file)
+        welcome_message.protocol("WM_DELETE_WINDOW", welcome_message.close)
+        welcome_message.grab_set()
+        welcome_message.wait_window()
+        self.load_intro_decision()  # Reload the decision after closing the window
 
     def export_chat(self):
         """Trigger chat export event."""

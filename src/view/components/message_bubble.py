@@ -1,37 +1,37 @@
 import tkinter as tk
 from tkinter import Frame, Label
+from model.text_collection.message import Message
 
 class MessageBubble:
     """Represents a message bubble on the canvas."""
 
-    def __init__(self, master, sender, message, bubble_color, y_offset, is_user):
+    def __init__(self, master, message: Message, y_offset):
         """
         Initializes a MessageBubble object.
 
         Args:
             master (tk.Widget): The parent widget (preferably a Canvas).
-            sender (str): The sender of the message.
-            message (str): The message content.
+            message (Message): The Message object containing message details.
             bubble_color (str): The color of the bubble.
             y_offset (int): The vertical offset of the bubble.
-            is_user (bool): Whether the message is from the user.
         """
         self.master = self.find_canvas_parent(master)
         if not self.master:
             raise ValueError("MessageBubble requires a Canvas or a widget with a Canvas parent")
 
+        bubble_color = '#3d3d3d' if message.isFromMe else '#1c1c1c'
         self.frame = Frame(self.master, bg=bubble_color)
         self.i = self.master.create_window(10, y_offset, anchor="nw", window=self.frame)
 
-        Label(self.frame, text=sender, font=("Helvetica", 20, "italic"), bg=bubble_color).grid(
+        Label(self.frame, text=message.sender.name, font=("Helvetica", 20, "italic"), bg=bubble_color).grid(
             row=0, column=0, sticky="w", padx=5
         )
 
         # Split message into lines if it exceeds 200 units
-        wrapped_message = self.wrap_text(message, 100)
+        wrapped_message = self.wrap_text(message.body, 100)
 
         # Right-align user's messages, otherwise left align
-        if is_user:
+        if message.isFromMe:
             Label(
                 self.frame,
                 text=wrapped_message,
@@ -79,8 +79,3 @@ class MessageBubble:
             lines.append(current_line)
 
         return "\n".join(lines)
-
-    def draw_triangle(self):
-        """Draws a triangle pointing towards the message bubble."""
-        x1, y1, x2, y2 = self.master.bbox(self.i)
-        return self.master.create_polygon(x1, y2 - 10, x1 - 15, y2 + 10, x1, y2, fill=self.frame.cget("bg"))
