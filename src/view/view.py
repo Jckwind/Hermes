@@ -129,7 +129,7 @@ class View(ThemedTk):
     def display_messages(self, messages: List[Dict[str, Any]]):
         """Display messages for the selected chat."""
         self.threadsafe_call(self._display_messages, messages)
-        self.print_conversation(messages) 
+      
 
     def _display_messages(self, messages: List[Dict[str, Any]]):
         for widget in self.message_inner_frame.winfo_children():
@@ -142,15 +142,7 @@ class View(ThemedTk):
         self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
         self.message_canvas.yview_moveto(1.0)  # Scroll to the bottom
 
-    def print_conversation(self, messages: List[Dict[str, Any]]):
-        """Print the entire conversation in the console."""
-        print("\n--- Conversation ---")
-        for message in messages:
-            sender = message['phone_number']
-            body = message['body']
-            date = message.get('date', 'Unknown date')
-            print(f"{date} - {sender}: {body}")
-        print("--- End of Conversation ---\n")
+    
 
     def create_message_item(self, message: Dict[str, Any]):
         """Create a single message item widget using MessageBubble."""
