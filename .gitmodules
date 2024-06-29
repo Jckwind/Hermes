@@ -1,3 +1,6 @@
 [submodule "lib/lib/imessage-exporter"]
 	path = lib/lib/imessage-exporter
 	url = https://github.com/Jckwind/imessage-exporter.git
+[submodule "lib/imessage-exporter"]
+	path = lib/imessage-exporter
+	url = https://github.com/Jckwind/imessage-exporter.git
