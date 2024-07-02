@@ -46,7 +46,7 @@ class Controller:
         chat_name = self._view.chat_listbox.get(chat_index)
         chat = self._model.get_chat(chat_name)
         if chat:
-            messages = self._model.get_messages(chat.chat_id)
+            messages = self._model.get_messages(chat.chat_identifier)
             self._view.display_messages(messages)
 
     def _on_export_chat(self, event: object) -> None:

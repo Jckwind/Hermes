@@ -47,7 +47,7 @@ class Model:
         return self.text_collector.get_all_chat_ids_with_labels(
             self.contacts_collector.contacts_cache)
 
-    def get_messages(self, chat_id: int) -> List[Message]:
+    def get_messages(self, chat_identifier: str) -> List[Message]:
         """Read messages for a specific chat.
 
         Args:
@@ -57,12 +57,12 @@ class Model:
             A list of dictionaries containing message details.
         """
         return self.text_collector.read_messages(
-            chat_id,
+            chat_identifier,
             self.contacts_collector.contacts_cache,
             self.self_contact
         )
 
-    def get_chat_members(self, chat_id: int) -> List[Contact]:
+    def get_chat_members(self, chat_identifier: str) -> List[Contact]:
         """Get the members of a specific chat.
 
         Args:
@@ -72,7 +72,7 @@ class Model:
             A list of chat member names or phone numbers.
         """
         return self.text_collector.get_chat_members(
-            chat_id, self.contacts_collector.contacts_cache)
+            chat_identifier, self.contacts_collector.contacts_cache)
 
     def load_contacts(self) -> list:
         """Load contacts from the AddressBook database.

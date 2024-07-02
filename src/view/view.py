@@ -10,6 +10,7 @@ from model.text_collection.message import Message
 from view.components.toolbar import Toolbar
 from view.components.message_bubble import MessageBubble
 from view.components.welcome_message import WelcomeMessage
+from view.components.chat_view import ChatView
 
 class View(ThemedTk):
     """Main GUI class for Hermes iMessage Viewer."""
@@ -100,20 +101,8 @@ class View(ThemedTk):
 
     def create_message_area(self, parent):
         """Create scrollable message display area."""
-        message_frame = ttk.Frame(parent, style='Chat.TFrame')
-        parent.add(message_frame, weight=3)
-
-        self.message_canvas = tk.Canvas(message_frame, bg='#2d2d2d')
-        self.message_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        self.message_scrollbar = ttk.Scrollbar(message_frame, orient=tk.VERTICAL, command=self.message_canvas.yview)
-        self.message_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.message_canvas.configure(yscrollcommand=self.message_scrollbar.set)
-        self.message_canvas.bind('<Configure>', self.on_message_canvas_configure)
-
-        self.message_inner_frame = ttk.Frame(self.message_canvas)
-        self.message_canvas.create_window((0, 0), window=self.message_inner_frame, anchor="nw")
+        self.chat_view = ChatView(parent)
+        parent.add(self.chat_view, weight=3)
 
     def display_chats(self, chats: List[Chat]):
         """Display the list of chats in the Listbox."""
@@ -128,23 +117,11 @@ class View(ThemedTk):
 
     def display_messages(self, messages: List[Message]):
         """Display messages for the selected chat."""
+        print("display_messages: count ", len(messages))
         self.threadsafe_call(self._display_messages, messages)
 
     def _display_messages(self, messages: List[Message]):
-        for widget in self.message_inner_frame.winfo_children():
-            widget.destroy()
-
-        for message in messages:
-            self.create_message_item(message)
-
-        self.message_inner_frame.update_idletasks()
-        self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
-        self.message_canvas.yview_moveto(1.0)  # Scroll to the bottom
-
-    def create_message_item(self, message: Message):
-        """Create a single message item widget using MessageBubble."""
-        message_bubble = MessageBubble(self.message_inner_frame, message, 0)
-        # message_bubble.pack(fill=tk.X, padx=10, pady=5, anchor='e' if message.isFromMe else 'w')
+        self.chat_view.display_messages(messages)
 
     def on_message_canvas_configure(self, event):
         """Handle message canvas configuration event."""

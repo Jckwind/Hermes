@@ -2,7 +2,12 @@
 
 import sqlite3
 import logging
-from typing import List, Dict, Optional
+import subprocess
+import os
+import shutil
+import threading
+import queue
+from typing import List, Dict, Optional, Tuple
 from .chat import Chat
 from .message import Message
 from ..contacts_collection.contact import Contact
@@ -52,20 +57,17 @@ class TextCollector:
             if not self.chat_cache:
                 chats = self._query_chats()
                 enriched_chats = self._enrich_chats_with_contacts(chats, contacts_cache)
-                self.chat_cache = {
-                    chat.chat_name: chat
-                    for chat in enriched_chats
-                }
+                self.chat_cache = {chat.chat_name: chat for chat in enriched_chats}
             return list(self.chat_cache.values())
         except sqlite3.Error as e:
             self._log_database_error(e)
             raise
 
-    def _query_chats(self) -> List[tuple]:
+    def _query_chats(self) -> List[Tuple[int, str, str]]:
         """Execute the database query to fetch chats.
 
         Returns:
-            A list of tuples containing chat information.
+            A list of tuples containing chat information (chat_id, display_name, chat_identifier).
         """
         with self.conn:
             cursor = self.conn.cursor()
@@ -81,7 +83,7 @@ class TextCollector:
             """)
             return cursor.fetchall()
 
-    def _enrich_chats_with_contacts(self, chats: List[tuple], contacts_cache: Dict[str, Contact]) -> List[Chat]:
+    def _enrich_chats_with_contacts(self, chats: List[Tuple[int, str, str]], contacts_cache: Dict[str, Contact]) -> List[Chat]:
         """Enrich chat data with contact information and return Chat objects.
 
         Args:
@@ -94,7 +96,6 @@ class TextCollector:
         enriched_chats = []
         for chat_id, display_name, chat_identifier in chats:
             if display_name == '':
-                # If display_name is empty, try to get the name from contacts_cache
                 contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
                 display_name = contact.name
 
@@ -108,21 +109,13 @@ class TextCollector:
 
         return enriched_chats
 
-    def _log_database_error(self, error: sqlite3.Error) -> None:
-        """Log database errors.
-
-        Args:
-            error: The SQLite error to log.
-        """
-        logging.error("Database error occurred: %s", error)
-
-    def read_messages(self, chat_id: int, contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
+    def read_messages(self, chat_identifier: str, contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
         """Read messages for a specific chat.
 
         Args:
-            chat_id: The ID of the chat to read messages from.
+            chat_identifier: The identifier of the chat to read messages from.
             contacts_cache: A dictionary of contacts, keyed by phone number.
-            self_number: The identifier for the user's own messages. Defaults to 'Me'.
+            self_contact: The Contact object representing the user.
 
         Returns:
             A list of Message objects containing message details.
@@ -131,55 +124,88 @@ class TextCollector:
             sqlite3.Error: If a database error occurs.
         """
         try:
-            results = self._fetch_messages_from_database(chat_id)
-            return self._process_message_results(results, contacts_cache, self_contact)
+            self._fetch_messages_from_database(chat_identifier)
+            return []
         except sqlite3.Error as e:
             self._log_database_error(e)
             raise
 
-    def _fetch_messages_from_database(self, chat_id: int) -> List[tuple]:
-        """Fetch raw message data from the database.
+    def _fetch_messages_from_database(self, chat_identifier: str) -> None:
+        """Fetch raw message data from the database using imessage-exporter.
+
+        This method uses the imessage-exporter binary to export messages for a specific chat.
+        The imessage-exporter is a Rust-based tool that exports iMessage data to various formats.
 
         Args:
-            chat_id: The ID of the chat to fetch messages for.
-
-        Returns:
-            A list of tuples containing raw message data.
+            chat_identifier: The identifier of the chat to fetch messages for.
 
         Raises:
-            sqlite3.Error: If a database error occurs.
+            subprocess.CalledProcessError: If the imessage-exporter command fails.
         """
-        query = """
-        SELECT message.ROWID, message.date, message.text, message.attributedBody,
-               handle.id, message.is_from_me, message.cache_has_attachments
-        FROM message
-        LEFT JOIN handle ON message.handle_id = handle.ROWID
-        WHERE message.ROWID IN (SELECT message_id FROM chat_message_join WHERE chat_id = ?)
-        ORDER BY message.date
-        """
-        with self.conn:
-            cursor = self.conn.cursor()
-            cursor.execute(query, (chat_id,))
-            return cursor.fetchall()
+        imessage_exporter_path = "lib/imessage-exporter/target/release/imessage-exporter"
+        output_path = "./dump"
+        self._cleanup_dump_folder(output_path)
+        args = [
+            "-f", "html",  # Export format
+            "-o", output_path,  # Output directory
+            "-c", "compatible",  # Compatibility mode
+            "-g", chat_identifier,  # Chat identifier
+        ]
+        command = [imessage_exporter_path] + args
 
-    def _process_message_results(self, results: List[tuple], contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
-        """Process raw message data into Message objects.
+        def run_command(cmd: List[str], output_queue: queue.Queue) -> None:
+            try:
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+                output_queue.put(("success", result.stdout, result.stderr))
+            except subprocess.CalledProcessError as e:
+                output_queue.put(("error", e.returncode, e.stdout, e.stderr))
+
+        output_queue = queue.Queue()
+        thread = threading.Thread(target=run_command, args=(command, output_queue))
+        thread.start()
+        thread.join()
+
+        result = output_queue.get()
+        if result[0] == "success":
+            logging.info("imessage-exporter output: %s", result[1])
+            logging.debug("imessage-exporter stderr: %s", result[2])
+            self._process_message_results(chat_identifier)
+        else:
+            logging.error("Error running imessage-exporter: %s", result[3])
+            raise subprocess.CalledProcessError(result[1], command, result[2], result[3])
+
+    def _process_message_results(self, chat_identifier: str) -> None:
+        """Process the results of the imessage-exporter command.
+
+        This method moves the exported files to a chat-specific folder.
 
         Args:
-            results: A list of tuples containing raw message data.
-            contacts_cache: A dictionary of contacts, keyed by phone number.
-            self_number: The identifier for the user's own messages.
-
-        Returns:
-            A list of Message objects.
+            chat_identifier: The identifier of the chat.
         """
-        messages = []
-        for result in results:
-            message = Message.fromDatabaseResult(result, self_contact)
-            if not message.isFromMe:
-                message.sender = contacts_cache.get(message.sender.phone_number, message.sender)
-            messages.append(message)
-        return messages
+        output_path = "./dump"
+        new_chat_folder = os.path.join("./", chat_identifier)
+        html_file = f"{chat_identifier}.html"
+        attachments_folder = "attachments"
+
+        os.makedirs(new_chat_folder, exist_ok=True)
+
+        src_html = os.path.join(output_path, html_file)
+        dst_html = os.path.join(new_chat_folder, html_file)
+        if os.path.exists(src_html):
+            shutil.move(src_html, dst_html)
+
+        src_attachments = os.path.join(output_path, attachments_folder)
+        dst_attachments = os.path.join(new_chat_folder, attachments_folder)
+        if os.path.exists(src_attachments):
+            shutil.move(src_attachments, dst_attachments)
+
+        logging.info("Moved files for %s to %s", chat_identifier, new_chat_folder)
+        self._cleanup_dump_folder(output_path)
+
+    def _cleanup_dump_folder(self, output_path: str) -> None:
+        """Delete the original ./dump folder after processing."""
+        if os.path.exists(output_path):
+            shutil.rmtree(output_path, ignore_errors=True)
 
     def _log_database_error(self, error: sqlite3.Error) -> None:
         """Log database errors.
@@ -229,14 +255,7 @@ class TextCollector:
             A list of Chat objects that match the search term.
         """
         lowercase_search_term = search_term.lower()
-        matching_chats = []
-
-        for chat in self.chat_cache.values():
-            if lowercase_search_term in chat.chat_name.lower():
-                matching_chats.append(chat)
-                continue
-
-        return matching_chats
+        return [chat for chat in self.chat_cache.values() if lowercase_search_term in chat.chat_name.lower()]
 
     def __del__(self):
         """Close the database connection when the object is destroyed."""

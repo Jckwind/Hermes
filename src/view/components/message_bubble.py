@@ -1,81 +1,67 @@
 import tkinter as tk
-from tkinter import Frame, Label
+from tkinter import ttk
 from model.text_collection.message import Message
 
-class MessageBubble:
-    """Represents a message bubble on the canvas."""
 
-    def __init__(self, master, message: Message, y_offset):
-        """
-        Initializes a MessageBubble object.
+class MessageBubble(ttk.Frame):
+    """A custom widget to display a message bubble in a chat interface."""
+
+    def __init__(self, master, message: Message):
+        """Initialize the MessageBubble widget.
 
         Args:
-            master (tk.Widget): The parent widget (preferably a Canvas).
-            message (Message): The Message object containing message details.
-            bubble_color (str): The color of the bubble.
-            y_offset (int): The vertical offset of the bubble.
+            master: The parent widget.
+            message: The Message object to display.
         """
-        self.master = self.find_canvas_parent(master)
-        if not self.master:
-            raise ValueError("MessageBubble requires a Canvas or a widget with a Canvas parent")
+        super().__init__(master)
+        self._message = message
+        self._create_widgets()
 
-        bubble_color = '#3d3d3d' if message.isFromMe else '#1c1c1c'
-        self.frame = Frame(self.master, bg=bubble_color)
-        self.i = self.master.create_window(10, y_offset, anchor="nw", window=self.frame)
+    def _create_widgets(self):
+        """Create and configure the widgets for the message bubble."""
+        style = ttk.Style()
+        self._configure_styles(style)
 
-        Label(self.frame, text=message.sender.name, font=("Helvetica", 20, "italic"), bg=bubble_color).grid(
-            row=0, column=0, sticky="w", padx=5
-        )
+        self._create_sender_label()
+        self._create_body_label()
+        self._create_date_label()
 
-        # Split message into lines if it exceeds 200 units
-        wrapped_message = self.wrap_text(message.body, 100)
+    def _configure_styles(self, style):
+        """Configure the styles for the message bubble.
 
-        # Right-align user's messages, otherwise left align
-        if message.isFromMe:
-            Label(
-                self.frame,
-                text=wrapped_message,
-                font=("Helvetica", 18, "bold"),
-                bg=bubble_color,
-                anchor="w",
-                justify="left",
-            ).grid(row=1, column=0, sticky="e", padx=5, pady=3)
+        Args:
+            style: The ttk.Style object to configure.
+        """
+        if self._message.is_from_me:
+            bg_color = '#1E90FF'
+            fg_color = '#F0F0F0'
         else:
-            Label(
-                self.frame,
-                text=wrapped_message,
-                font=("Helvetica", 18, "bold"),
-                bg=bubble_color,
-                anchor="w",
-            ).grid(row=1, column=0, sticky="w", padx=5, pady=3)
+            bg_color = '#E0E0E0'
+            fg_color = '#333333'
 
-        self.master.update_idletasks()  # Update to get accurate dimensions
-        self.height = (
-            self.master.bbox(self.i)[3] - self.master.bbox(self.i)[1]
-        )  # Calculate height after creation
+        style_name = f'MessageBubble_{id(self)}.TFrame'
+        style.configure(style_name, background=bg_color)
+        style.configure(style_name, relief='solid')
+        style.configure(style_name, borderwidth=1)
+        style.configure(style_name, borderradius=10)
+        style.configure(f'SenderLabel_{id(self)}.TLabel', foreground=fg_color, background=bg_color, font=("Helvetica", 14))
+        style.configure(f'BodyLabel_{id(self)}.TLabel', foreground=fg_color, background=bg_color, font=("Helvetica", 16))
+        style.configure(f'DateLabel_{id(self)}.TLabel', foreground=fg_color, background=bg_color, font=("Helvetica", 12))
 
-    def find_canvas_parent(self, widget):
-        """Recursively search for a Canvas parent"""
-        if widget is None:
-            return None
-        if isinstance(widget, tk.Canvas):
-            return widget
-        return self.find_canvas_parent(widget.master)
+        self.configure(style=style_name)
 
-    def wrap_text(self, text, max_length):
-        """Wraps text to a new line if it exceeds the max_length."""
-        words = text.split()
-        lines = []
-        current_line = ""
+    def _create_sender_label(self):
+        """Create and pack the sender label."""
+        sender_label = ttk.Label(self, text=self._message.sender.name, style=f'SenderLabel_{id(self)}.TLabel')
+        sender_label.pack(anchor='e' if self._message.is_from_me else 'w', padx=5, pady=(5, 0))
 
-        for word in words:
-            if len(current_line) + len(word) + 1 > max_length:
-                lines.append(current_line)
-                current_line = word
-            else:
-                current_line += " " + word if current_line else word
+    def _create_body_label(self):
+        """Create and pack the message body label."""
+        body_text = self._message.body if not self._message.is_attachment_only else "(Image Attachment)"
+        body_label = ttk.Label(self, text=body_text, style=f'BodyLabel_{id(self)}.TLabel', wraplength=300, justify='left')
+        body_label.pack(fill='x', padx=5, pady=(5, 0))
 
-        if current_line:
-            lines.append(current_line)
-
-        return "\n".join(lines)
+    def _create_date_label(self):
+        """Create and pack the date label."""
+        date_label = ttk.Label(self, text=self._message.formatted_date, style=f'DateLabel_{id(self)}.TLabel')
+        date_label.pack(anchor='e', padx=5, pady=(5, 5))
