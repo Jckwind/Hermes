@@ -146,7 +146,7 @@ class TextCollector:
         output_path = "./dump"
         self._cleanup_dump_folder(output_path)
         args = [
-            "-f", "html",  # Export format
+            "-f", "txt",  # Change export format to txt
             "-o", output_path,  # Output directory
             "-c", "compatible",  # Compatibility mode
             "-g", chat_identifier,  # Chat identifier
@@ -184,15 +184,15 @@ class TextCollector:
         """
         output_path = "./dump"
         new_chat_folder = os.path.join("./", chat_identifier)
-        html_file = f"{chat_identifier}.html"
+        txt_file = f"{chat_identifier}.txt"  # Change file extension to txt
         attachments_folder = "attachments"
 
         os.makedirs(new_chat_folder, exist_ok=True)
 
-        src_html = os.path.join(output_path, html_file)
-        dst_html = os.path.join(new_chat_folder, html_file)
-        if os.path.exists(src_html):
-            shutil.move(src_html, dst_html)
+        src_txt = os.path.join(output_path, txt_file)
+        dst_txt = os.path.join(new_chat_folder, txt_file)
+        if os.path.exists(src_txt):
+            shutil.move(src_txt, dst_txt)
 
         src_attachments = os.path.join(output_path, attachments_folder)
         dst_attachments = os.path.join(new_chat_folder, attachments_folder)
