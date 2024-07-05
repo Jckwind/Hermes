@@ -189,12 +189,12 @@ class TextCollector:
         folder_name = f"{contact.name}-conversation"
         conversations_folder = "./conversations_selected"  # New folder path
         new_chat_folder = os.path.join(conversations_folder, folder_name)  # Directory named after contact name
-        txt_file = f"{chat_identifier}.txt" 
+        txt_file = f"{contact.name}.txt"  # Name the file using the contact's name
         attachments_folder = "attachments"
 
         os.makedirs(new_chat_folder, exist_ok=True)
 
-        src_txt = os.path.join(output_path, txt_file)
+        src_txt = os.path.join(output_path, f"{chat_identifier}.txt")  # Original file name
         dst_txt = os.path.join(new_chat_folder, txt_file)
         if os.path.exists(src_txt):
             shutil.move(src_txt, dst_txt)
