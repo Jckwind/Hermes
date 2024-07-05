@@ -124,13 +124,13 @@ class TextCollector:
             sqlite3.Error: If a database error occurs.
         """
         try:
-            self._fetch_messages_from_database(chat_identifier)
+            self._fetch_messages_from_database(chat_identifier, contacts_cache)
             return []
         except sqlite3.Error as e:
             self._log_database_error(e)
             raise
 
-    def _fetch_messages_from_database(self, chat_identifier: str) -> None:
+    def _fetch_messages_from_database(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
         """Fetch raw message data from the database using imessage-exporter.
 
         This method uses the imessage-exporter binary to export messages for a specific chat.
@@ -138,6 +138,7 @@ class TextCollector:
 
         Args:
             chat_identifier: The identifier of the chat to fetch messages for.
+            contacts_cache: A dictionary of contacts, keyed by phone number.
 
         Raises:
             subprocess.CalledProcessError: If the imessage-exporter command fails.
@@ -169,22 +170,26 @@ class TextCollector:
         if result[0] == "success":
             logging.info("imessage-exporter output: %s", result[1])
             logging.debug("imessage-exporter stderr: %s", result[2])
-            self._process_message_results(chat_identifier)
+            self._process_message_results(chat_identifier, contacts_cache)
         else:
             logging.error("Error running imessage-exporter: %s", result[3])
             raise subprocess.CalledProcessError(result[1], command, result[2], result[3])
 
-    def _process_message_results(self, chat_identifier: str) -> None:
+    def _process_message_results(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
         """Process the results of the imessage-exporter command.
 
         This method moves the exported files to a chat-specific folder.
 
         Args:
             chat_identifier: The identifier of the chat.
+            contacts_cache: A dictionary of contacts, keyed by phone number.
         """
         output_path = "./dump"
-        new_chat_folder = os.path.join("./", chat_identifier)
-        txt_file = f"{chat_identifier}.txt"  # Change file extension to txt
+        contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
+        folder_name = f"{contact.name}-conversation"
+        conversations_folder = "./conversations_selected"  # New folder path
+        new_chat_folder = os.path.join(conversations_folder, folder_name)  # Directory named after contact name
+        txt_file = f"{chat_identifier}.txt" 
         attachments_folder = "attachments"
 
         os.makedirs(new_chat_folder, exist_ok=True)
@@ -201,6 +206,8 @@ class TextCollector:
 
         logging.info("Moved files for %s to %s", chat_identifier, new_chat_folder)
         self._cleanup_dump_folder(output_path)
+
+
 
     def _cleanup_dump_folder(self, output_path: str) -> None:
         """Delete the original ./dump folder after processing."""
