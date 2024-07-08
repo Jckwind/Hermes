@@ -43,6 +43,8 @@ class ChatView(ttk.Frame):
         """Display the chat name in the message area."""
         if chat_name not in self.chat_name_listbox.get(0, tk.END):
             self.chat_name_listbox.insert(tk.END, chat_name)
+        else:
+            self.chat_name_listbox.delete(self.chat_name_listbox.get(0, tk.END).index(chat_name))
 
     def get_displayed_chats(self) -> List[str]:
         """Retrieve the list of chat names currently displayed in the Listbox."""
