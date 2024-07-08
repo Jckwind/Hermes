@@ -43,11 +43,16 @@ class Controller:
             event: The event object containing the selected chat's ID.
         """
         chat_index = event.widget.curselection()
-        chat_name = self._view.chat_listbox.get(chat_index)
-        chat = self._model.get_chat(chat_name)
-        if chat:
-            messages = self._model.get_messages(chat.chat_identifier)
-            self._view.display_messages(messages)
+        if chat_index:
+            chat_name = self._view.chat_listbox.get(chat_index)
+            self._view.display_chat_name(chat_name)
+            
+            # Call the backend to retrieve messages
+            chat = self._model.get_chat(chat_name)
+            if chat:
+                messages = self._model.get_messages(chat.chat_identifier)
+                # Optionally, you can log or process the messages here
+                print(f"Retrieved {len(messages)} messages for chat: {chat_name}")
 
     def _on_export_chat(self, event: object) -> None:
         """Handle chat export event.

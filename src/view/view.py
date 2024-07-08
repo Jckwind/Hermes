@@ -104,6 +104,10 @@ class View(ThemedTk):
         self.chat_view = ChatView(parent)
         parent.add(self.chat_view, weight=3)
 
+    def display_chat_name(self, chat_name: str):
+        """Display the chat name in the message area."""
+        self.chat_view.display_chat_name(chat_name)
+
     def display_chats(self, chats: List[Chat]):
         """Display the list of chats in the Listbox."""
         self.threadsafe_call(self._display_chats, chats)
