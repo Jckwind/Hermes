@@ -49,3 +49,7 @@ class ChatView(ttk.Frame):
     def get_displayed_chats(self) -> List[str]:
         """Retrieve the list of chat names currently displayed in the Listbox."""
         return self.chat_name_listbox.get(0, tk.END)
+
+    def clear_messages(self):
+        """Clear all messages in the chat view."""
+        self.chat_name_listbox.delete(0, tk.END)

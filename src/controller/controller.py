@@ -5,6 +5,7 @@ from model.text_collection.chat import Chat
 import os
 import time
 from tkinter import filedialog, simpledialog
+import subprocess  # Add this import
 
 class Controller:
     """Controller class for managing interactions between Model and View."""
@@ -25,7 +26,35 @@ class Controller:
         self._view.chat_listbox.bind("<<ListboxSelect>>", self._on_chat_selected)
         self._view.bind("<<ExportChat>>", self._on_export_chat)
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
+        self._view.bind("<<Reset>>", self._on_reset)  # Add Reset event handler
         self._view.search_var.trace("w", self._on_search)
+
+    def _on_reset(self, event: object) -> None:
+        """Handle reset event.
+
+        Args:
+            event: The event object (unused).
+        """
+        # Clear the chat view
+        self._view.clear_chat_view()  # Correct method name
+
+        # Delete the specified folders
+        self._delete_folder("./conversations_selected")
+        self._delete_folder(os.path.join(os.path.dirname(__file__), '../model/google_drive_upload/exported_chats'))
+
+    def _delete_folder(self, folder_path: str) -> None:
+        """Delete a folder and its contents.
+
+        Args:
+            folder_path: Path to the folder to be deleted.
+        """
+        if os.path.exists(folder_path):
+            for root, dirs, files in os.walk(folder_path, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(folder_path)
 
     def run(self) -> None:
         """Load chats and start the main event loop."""
@@ -55,12 +84,25 @@ class Controller:
         Args:
             event: The event object (unused).
         """
-        selected_chat = self._view.get_selected_chat()
-        if selected_chat:
-            chat = self._model.text_collector.chat_cache.get(selected_chat.chat_id)
-            if chat:
-                messages = self._model.get_messages(chat.chat_id)
-                self._view.export_chat(messages)
+        # Collect the displayed conversations
+        self._collect_displayed_conversations()
+
+        # Create a directory for the exported chats in ../model/google_drive_upload
+        output_dir = os.path.join(os.path.dirname(__file__), '../model/google_drive_upload/exported_chats')
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Retrieve the list of chat names currently displayed in the ChatView
+        displayed_chats = self._view.chat_view.get_displayed_chats()
+
+        # Process only the displayed chats and generate .txt files
+        for chat_name in displayed_chats:
+            self._process_chat(chat_name, output_dir)
+
+        # Call the google_drive_upload.py script for each file in the directory
+        google_drive_upload_script = os.path.join(os.path.dirname(__file__), '../model/google_drive_upload/google_drive_upload.py')
+        for filename in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, filename)
+            subprocess.run(["python", google_drive_upload_script, file_path])
 
     def _on_toggle_dump_window(self, event: object) -> None:
         """Handle toggle dump window event.

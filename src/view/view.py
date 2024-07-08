@@ -62,6 +62,15 @@ class View(ThemedTk):
 
         self.toolbar.add_button("Export", self.export_chat, position=tk.RIGHT)
         self.toolbar.add_button("Dump", self.toggle_dump_window, position=tk.RIGHT)
+        self.toolbar.add_button("Reset", self.reset, position=tk.RIGHT)  # Add Reset button
+
+    def reset(self):
+        """Trigger reset event."""
+        self.event_generate("<<Reset>>")
+
+    def clear_chat_view(self):
+        """Clear all entries in the chat view."""
+        self.chat_view.clear_messages()
 
     def create_paned_window(self):
         """Create paned window for chat list and message area."""
@@ -183,6 +192,13 @@ class View(ThemedTk):
     def notify_dump_complete(self, folder_path: str):
         """Notify the user that the dump is complete."""
         messagebox.showinfo("Dump Complete", f"Conversations have been saved to the folder: {folder_path}")
+
+    def get_selected_chat(self):
+        """Get the currently selected chat from the chat listbox."""
+        selected_index = self.chat_listbox.curselection()
+        if selected_index:
+            return self.chat_listbox.get(selected_index)
+        return None
 
 if __name__ == "__main__":
     app = View()
