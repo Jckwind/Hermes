@@ -11,6 +11,7 @@ from view.components.toolbar import Toolbar
 from view.components.message_bubble import MessageBubble
 from view.components.welcome_message import WelcomeMessage
 from view.components.chat_view import ChatView
+from tkinter import filedialog, simpledialog, messagebox
 
 class View(ThemedTk):
     """Main GUI class for Hermes iMessage Viewer."""
@@ -174,6 +175,14 @@ class View(ThemedTk):
     def threadsafe_call(self, callback, *args):
         """Execute a callback in a thread-safe manner."""
         self.after(0, callback, *args)
+
+    def prompt_folder_name(self) -> str:
+        """Prompt the user to enter a folder name."""
+        return simpledialog.askstring("Folder Name", "Enter the name for the folder to save conversations:")
+
+    def notify_dump_complete(self, folder_path: str):
+        """Notify the user that the dump is complete."""
+        messagebox.showinfo("Dump Complete", f"Conversations have been saved to the folder: {folder_path}")
 
 if __name__ == "__main__":
     app = View()

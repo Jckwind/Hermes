@@ -186,10 +186,10 @@ class TextCollector:
         """
         output_path = "./dump"
         contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
-        folder_name = f"{contact.name}-conversation"
+        folder_name = f"{contact.name.replace(' ', '_')}-conversation"  # Replace spaces with underscores
         conversations_folder = "./conversations_selected"  # New folder path
         new_chat_folder = os.path.join(conversations_folder, folder_name)  # Directory named after contact name
-        txt_file = f"{contact.name}.txt"  # Name the file using the contact's name
+        txt_file = f"{contact.name.replace(' ', '_')}.txt"  # Replace spaces with underscores
         attachments_folder = "attachments"
 
         os.makedirs(new_chat_folder, exist_ok=True)
@@ -206,8 +206,6 @@ class TextCollector:
 
         logging.info("Moved files for %s to %s", chat_identifier, new_chat_folder)
         self._cleanup_dump_folder(output_path)
-
-
 
     def _cleanup_dump_folder(self, output_path: str) -> None:
         """Delete the original ./dump folder after processing."""

@@ -51,16 +51,21 @@ class Model:
         """Read messages for a specific chat.
 
         Args:
-            chat_id: The ID of the chat to read messages from.
+            chat_identifier: The identifier of the chat to read messages from.
 
         Returns:
-            A list of dictionaries containing message details.
+            A list of Message objects containing message details.
         """
-        return self.text_collector.read_messages(
+        messages = self.text_collector.read_messages(
             chat_identifier,
             self.contacts_collector.contacts_cache,
             self.self_contact
         )
+        
+        print(f"Retrieved {len(messages)} messages for chat identifier: {chat_identifier}")  # Debugging
+        for message in messages:
+            print(f"Message: {message.timestamp}, {message.sender}, {message.text}")  # Debugging
+        return messages
 
     def get_chat_members(self, chat_identifier: str) -> List[Contact]:
         """Get the members of a specific chat.
