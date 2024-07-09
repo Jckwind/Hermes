@@ -5,8 +5,9 @@ import sys
 import os
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
-SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), 'hermes-428815-234058a83f81.json')
-PARENT_FOLDER_ID = "1IiTu6nJrqYrtAKBAYUiVo85VhiND-1c3"
+SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), 'hermes-428815-234058a83f81.json') #REPLACE THIS WITH
+#THE SERVICE ACCOUNT JSON FILE  
+PARENT_FOLDER_ID = "1IiTu6nJrqYrtAKBAYUiVo85VhiND-1c3" #REPLACE THIS WITH THE PARENT FOLDER ID
 
 def authenticate(): 
     creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
