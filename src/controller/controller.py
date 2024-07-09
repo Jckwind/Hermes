@@ -27,6 +27,7 @@ class Controller:
         self._view.bind("<<ExportChat>>", self._on_export_chat)
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
         self._view.bind("<<Reset>>", self._on_reset)  # Add Reset event handler
+        self._view.bind("<<StartNewProcess>>", self._on_start_new_process)  # Add StartNewProcess event handler
         self._view.search_var.trace("w", self._on_search)
 
     def _on_reset(self, event: object) -> None:
@@ -41,6 +42,37 @@ class Controller:
         # Delete the specified folders
         self._delete_folder("./conversations_selected")
         self._delete_folder(os.path.join(os.path.dirname(__file__), '../model/google_drive_upload/exported_chats'))
+
+        # Hide the folder naming widgets
+        self._view.settings.hide_folder_naming()
+
+    def _on_start_new_process(self, event: object) -> None:
+        """Handle start new process event.
+
+        Args:
+            event: The event object (unused).
+        """
+        # Use the folder name from the settings
+        folder_name = self._view.folder_name
+        if not folder_name:
+            return  # No folder name set
+
+        # Create a directory for the conversation text files
+        output_dir = os.path.join(os.getcwd(), folder_name)
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Wait for the conversations_selected folder to be populated
+        self._wait_for_folder_population()
+
+        # Retrieve the list of chat names currently displayed in the ChatView
+        displayed_chats = self._view.chat_view.get_displayed_chats()
+
+        # Process only the displayed chats and generate .txt files
+        for chat_name in displayed_chats:
+            self._process_chat(chat_name, output_dir)
+
+        # Notify the user that the dump is complete
+        self._view.notify_dump_complete(output_dir)
 
     def _delete_folder(self, folder_path: str) -> None:
         """Delete a folder and its contents.
@@ -113,27 +145,8 @@ class Controller:
         # Trigger the backend process to populate the conversations_selected folder
         self._collect_displayed_conversations()
 
-        # Prompt the user for a folder name
-        folder_name = self._view.prompt_folder_name()
-        if not folder_name:
-            return  # User cancelled the prompt
-
-        # Create a directory for the conversation text files
-        output_dir = os.path.join(os.getcwd(), folder_name)
-        os.makedirs(output_dir, exist_ok=True)
-
-        # Wait for the conversations_selected folder to be populated
-        self._wait_for_folder_population()
-
-        # Retrieve the list of chat names currently displayed in the ChatView
-        displayed_chats = self._view.chat_view.get_displayed_chats()
-
-        # Process only the displayed chats and generate .txt files
-        for chat_name in displayed_chats:
-            self._process_chat(chat_name, output_dir)
-
-        # Notify the user that the dump is complete
-        self._view.notify_dump_complete(output_dir)
+        # Show the folder naming widgets
+        self._view.settings.show_folder_naming()
 
     def _collect_displayed_conversations(self) -> None:
         """Collect conversations for the chats currently displayed in the ChatView."""

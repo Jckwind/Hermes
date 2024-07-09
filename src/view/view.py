@@ -31,6 +31,8 @@ class View(ThemedTk):
         if self.show_intro:
             self.show_introduction_window()
 
+        self.folder_name = ""
+
     def create_styles(self):
         """Create and configure styles for widgets."""
         self.style = ttk.Style(self)
@@ -118,12 +120,16 @@ class View(ThemedTk):
 
     def create_settings_area(self, parent):
         """Create settings area."""
-        self.settings = Settings(parent)
+        self.settings = Settings(parent, self)
         parent.add(self.settings, weight=1)
 
     def apply_theme(self, theme_name):
         """Apply the theme for the application."""
         self.set_theme(theme_name)
+
+    def set_folder_name(self, folder_name: str):
+        """Set the folder name for saving conversations."""
+        self.folder_name = folder_name
 
     def display_chat_name(self, chat_name: str):
         """Display the chat name in the message area."""
@@ -196,10 +202,6 @@ class View(ThemedTk):
         """Execute a callback in a thread-safe manner."""
         self.after(0, callback, *args)
 
-    def prompt_folder_name(self) -> str:
-        """Prompt the user to enter a folder name."""
-        return simpledialog.askstring("Folder Name", "Enter the name for the folder to save conversations:")
-
     def notify_dump_complete(self, folder_path: str):
         """Notify the user that the dump is complete."""
         messagebox.showinfo("Dump Complete", f"Conversations have been saved to the folder: {folder_path}")
@@ -210,6 +212,11 @@ class View(ThemedTk):
         if selected_index:
             return self.chat_listbox.get(selected_index)
         return None
+
+    def start_new_process(self, event):
+        """Start a new process when the user applies the settings."""
+        # Start a new process here
+        print("Starting a new process...")
 
 if __name__ == "__main__":
     app = View()

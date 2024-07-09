@@ -266,3 +266,4 @@ class TextCollector:
         """Close the database connection when the object is destroyed."""
         if self.conn:
             self.conn.close()
+

@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import ttk
 
 class Settings(ttk.Frame):
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, view, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        self.parent = parent
+        self.view = view
         self.create_widgets()
 
     def create_widgets(self):
@@ -12,17 +12,33 @@ class Settings(ttk.Frame):
         self.label = ttk.Label(self, text="Settings", font=('Helvetica', 16))
         self.label.pack(pady=10)
 
-        self.theme_label = ttk.Label(self, text="Choose Theme:", font=('Helvetica', 12))
-        self.theme_label.pack(pady=5)
-
-        self.theme_var = tk.StringVar(value="equilux")
-        self.theme_combobox = ttk.Combobox(self, textvariable=self.theme_var, values=["equilux", "arc", "radiance"])
-        self.theme_combobox.pack(pady=5)
-
+        self.folder_label = ttk.Label(self, text="Folder Name:", font=('Helvetica', 12))
+        self.folder_var = tk.StringVar()
+        self.folder_entry = ttk.Entry(self, textvariable=self.folder_var)
         self.apply_button = ttk.Button(self, text="Apply", command=self.apply_settings)
+
+        # Initially hide the folder naming widgets
+        self.folder_label.pack_forget()
+        self.folder_entry.pack_forget()
+        self.apply_button.pack_forget()
+
+    def show_folder_naming(self):
+        """Show the folder naming widgets."""
+        self.folder_label.pack(pady=5)
+        self.folder_entry.pack(pady=5)
         self.apply_button.pack(pady=10)
+
+    def hide_folder_naming(self):
+        """Hide the folder naming widgets."""
+        self.folder_label.pack_forget()
+        self.folder_entry.pack_forget()
+        self.apply_button.pack_forget()
 
     def apply_settings(self):
         """Apply the selected settings."""
-        selected_theme = self.theme_var.get()
-        self.parent.apply_theme(selected_theme)
+        folder_name = self.folder_var.get()
+        self.view.set_folder_name(folder_name)
+        self.hide_folder_naming()  # Hide the widgets after applying the settings
+
+        # Start the dump process
+        self.view.event_generate("<<StartNewProcess>>")
