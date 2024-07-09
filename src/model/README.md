@@ -19,3 +19,4 @@ To make the Google Drive upload tool work, follow these instructions:
    - In your Google Drive, create a new folder and name it appropriately.
    - Share the folder with the email address of the service account you created on the Google Cloud Console.
    - Make sure to give it editor permissions.
+   - The parent ID folder is the url extention of the folder in your browser

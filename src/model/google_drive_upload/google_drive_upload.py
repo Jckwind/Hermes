@@ -5,7 +5,7 @@ import sys
 import os
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
-SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), 'hermes-428815-8aa12f5354bd.json')
+SERVICE_ACCOUNT_FILE = os.path.join(os.path.dirname(__file__), 'hermes-428815-234058a83f81.json')
 PARENT_FOLDER_ID = "1IiTu6nJrqYrtAKBAYUiVo85VhiND-1c3"
 
 def authenticate(): 
@@ -17,7 +17,7 @@ def upload_file(file_path):
     service = build('drive', 'v3', credentials=creds)
     
     file_metadata = {
-        'name': os.path.basename(file_path),  # Use the actual file name
+        'name': os.path.basename(file_path),  
         'parents': [PARENT_FOLDER_ID]
     }
 
