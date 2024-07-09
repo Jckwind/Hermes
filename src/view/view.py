@@ -60,7 +60,7 @@ class View(ThemedTk):
         self.toolbar = Toolbar(self.main_frame)
         self.toolbar.pack(fill=tk.X)
 
-        self.toolbar.add_button("Export", self.export_chat, position=tk.RIGHT)
+        self.toolbar.add_button("Upload to Google Drive", self.export_chat, position=tk.RIGHT)
         self.toolbar.add_button("Dump", self.toggle_dump_window, position=tk.RIGHT)
         self.toolbar.add_button("Reset", self.reset, position=tk.RIGHT)  # Add Reset button
 
