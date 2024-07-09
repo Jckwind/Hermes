@@ -11,6 +11,7 @@ from view.components.toolbar import Toolbar
 from view.components.message_bubble import MessageBubble
 from view.components.welcome_message import WelcomeMessage
 from view.components.chat_view import ChatView
+from view.components.settings import Settings
 from tkinter import filedialog, simpledialog, messagebox
 
 class View(ThemedTk):
@@ -73,12 +74,13 @@ class View(ThemedTk):
         self.chat_view.clear_messages()
 
     def create_paned_window(self):
-        """Create paned window for chat list and message area."""
+        """Create paned window for chat list, message area, and settings."""
         paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         self.create_chat_list(paned_window)
         self.create_message_area(paned_window)
+        self.create_settings_area(paned_window)
 
     def create_chat_list(self, parent):
         """Create scrollable chat list area using Listbox."""
@@ -113,6 +115,15 @@ class View(ThemedTk):
         """Create scrollable message display area."""
         self.chat_view = ChatView(parent)
         parent.add(self.chat_view, weight=3)
+
+    def create_settings_area(self, parent):
+        """Create settings area."""
+        self.settings = Settings(parent)
+        parent.add(self.settings, weight=1)
+
+    def apply_theme(self, theme_name):
+        """Apply the theme for the application."""
+        self.set_theme(theme_name)
 
     def display_chat_name(self, chat_name: str):
         """Display the chat name in the message area."""
