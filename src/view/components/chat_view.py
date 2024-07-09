@@ -7,6 +7,7 @@ class ChatView(ttk.Frame):
 
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
+        self.parent = master
         self._create_widgets()
         self._bind_events()
 
@@ -15,12 +16,19 @@ class ChatView(ttk.Frame):
         self.chat_name_listbox = tk.Listbox(self, bg='#2d2d2d', fg='white', font=('Helvetica', 12))
         self.chat_name_listbox.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
+        self.chat_name_listbox.bind("<Button-1>", self.on_message_click)  # Bind left mouse click event
+
     def _bind_events(self):
         """Bind events for smooth scrolling and resizing."""
         self.bind_all('<MouseWheel>', self._on_mousewheel)
         self.bind_all('<Button-4>', self._on_mousewheel)
         self.bind_all('<Button-5>', self._on_mousewheel)
         self.bind_all('<Shift-MouseWheel>', self._on_shift_mousewheel)
+
+    def on_message_click(self, event):
+        selected_index = self.chat_name_listbox.curselection()
+        if selected_index:
+            self.chat_name_listbox.delete(selected_index)
 
     def _on_mousewheel(self, event):
         """Handle mousewheel and trackpad scrolling."""
