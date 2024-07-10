@@ -9,12 +9,12 @@ class Settings(ttk.Frame):
 
     def create_widgets(self):
         """Create and arrange settings widgets."""
-        self.label = ttk.Label(self, text="Settings", font=('Helvetica', 16))
-        self.label.pack(pady=10)
+        self.label = tk.Label(self, text="Settings", font=('Helvetica', 16), anchor='e', background='light grey')
+        self.label.pack(pady=10, anchor='e')
 
-        self.folder_label = ttk.Label(self, text="Folder Name:", font=('Helvetica', 12))
+        self.folder_label = tk.Label(self, text="Folder Name:", font=('Helvetica', 12), anchor='e', background='light grey')
         self.folder_var = tk.StringVar()
-        self.folder_entry = ttk.Entry(self, textvariable=self.folder_var)
+        self.folder_entry = ttk.Entry(self, textvariable=self.folder_var, justify='right')
         self.apply_button = ttk.Button(self, text="Apply", command=self.apply_settings)
 
         # Initially hide the folder naming widgets
@@ -24,9 +24,9 @@ class Settings(ttk.Frame):
 
     def show_folder_naming(self):
         """Show the folder naming widgets."""
-        self.folder_label.pack(pady=5)
-        self.folder_entry.pack(pady=5)
-        self.apply_button.pack(pady=10)
+        self.folder_label.pack(pady=5, anchor='e')
+        self.folder_entry.pack(pady=5, anchor='e')
+        self.apply_button.pack(pady=10, anchor='e')
 
     def hide_folder_naming(self):
         """Hide the folder naming widgets."""

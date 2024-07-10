@@ -20,6 +20,7 @@ class Controller:
         self._model = model
         self._view = view
         self._setup_event_handlers()
+        self._on_reset()  # Call reset when the application starts
 
     def _setup_event_handlers(self) -> None:
         """Set up event handlers for the view."""
@@ -30,7 +31,7 @@ class Controller:
         self._view.bind("<<StartNewProcess>>", self._on_start_new_process)  # Add StartNewProcess event handler
         self._view.search_var.trace("w", self._on_search)
 
-    def _on_reset(self, event: object) -> None:
+    def _on_reset(self, event: object = None) -> None:
         """Handle reset event.
 
         Args:
@@ -45,6 +46,10 @@ class Controller:
 
         # Hide the folder naming widgets
         self._view.settings.hide_folder_naming()
+
+        # Reset the folder name to an empty string
+        self._view.folder_name = ""
+        self._view.settings.folder_var.set("")  # Clear the StringVar associated with the entry widget
 
     def _on_start_new_process(self, event: object) -> None:
         """Handle start new process event.
@@ -73,6 +78,9 @@ class Controller:
 
         # Notify the user that the dump is complete
         self._view.notify_dump_complete(output_dir)
+
+        # Call reset at the end
+        self._on_reset()
 
     def _delete_folder(self, folder_path: str) -> None:
         """Delete a folder and its contents.
@@ -135,6 +143,9 @@ class Controller:
         for filename in os.listdir(output_dir):
             file_path = os.path.join(output_dir, filename)
             subprocess.run(["python", google_drive_upload_script, file_path])
+
+        # Call reset at the end
+        self._on_reset()
 
     def _on_toggle_dump_window(self, event: object) -> None:
         """Handle toggle dump window event.

@@ -16,6 +16,9 @@ def main():
     # Initialize the controller
     controller = Controller(model, view)
 
+    # Reset the application state before starting
+    controller._on_reset()
+
     # Start the application
     controller.run()
 
