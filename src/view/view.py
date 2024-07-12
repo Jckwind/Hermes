@@ -218,6 +218,18 @@ class View(ThemedTk):
         # Start a new process here
         print("Starting a new process...")
 
+    def notify_export_complete(self, output_dir):
+        """Show a notification when the export is complete."""
+        messagebox.showinfo("Export Complete", f"Chats have been exported to:\n{output_dir}")
+
+    def notify_upload_complete(self):
+        """Show a notification when the upload to Google Drive is complete."""
+        messagebox.showinfo("Upload Complete", "Chats have been uploaded to Google Drive.")
+
+    def show_error(self, title, message):
+        """Show an error message to the user."""
+        messagebox.showerror(title, message)
+
 if __name__ == "__main__":
     app = View()
     app.mainloop()

@@ -110,23 +110,15 @@ class TextCollector:
                
         return enriched_chats
 
-    def read_messages(self, chat_identifier: str, contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
+    def read_messages(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
         """Read messages for a specific chat.
 
         Args:
             chat_identifier: The identifier of the chat to read messages from.
             contacts_cache: A dictionary of contacts, keyed by phone number.
-            self_contact: The Contact object representing the user.
-
-        Returns:
-            A list of Message objects containing message details.
-
-        Raises:
-            sqlite3.Error: If a database error occurs.
         """
         try:
             self._fetch_messages_from_database(chat_identifier, contacts_cache)
-            return []
         except sqlite3.Error as e:
             self._log_database_error(e)
             raise
