@@ -56,16 +56,18 @@ class Model:
         Returns:
             A list of Message objects containing message details.
         """
-        messages = self.text_collector.read_messages(
-            chat_identifier,
-            self.contacts_collector.contacts_cache,
-            self.self_contact
-        )
-        
-        print(f"Retrieved {len(messages)} messages for chat identifier: {chat_identifier}")  # Debugging
-        for message in messages:
-            print(f"Message: {message.timestamp}, {message.sender}, {message.text}")  # Debugging
-        return messages
+        try:
+            messages = self.text_collector.read_messages(
+                chat_identifier,
+                self.contacts_collector.contacts_cache,
+                self.self_contact
+            )
+            
+            print(f"Retrieved {len(messages)} messages for chat identifier: {chat_identifier}")
+            return messages
+        except Exception as e:
+            print(f"Error retrieving messages for chat {chat_identifier}: {e}")
+            return []
 
     def get_chat_members(self, chat_identifier: str) -> List[Contact]:
         """Get the members of a specific chat.
@@ -107,4 +109,38 @@ class Model:
         Returns:
             The Chat object if found in the cache, otherwise None.
         """
-        return self.text_collector.chat_cache.get(chat_name)
+        chat = self.text_collector.chat_cache.get(chat_name)
+        if chat is None:
+            print(f"Chat not found: {chat_name}")
+        return chat
+
+    def get_displayed_chats(self, chat_names: List[str]) -> List[Chat]:
+        """
+        Get Chat objects for the displayed chat names.
+        
+        Args:
+            chat_names: List of chat names to retrieve.
+        
+        Returns:
+            List of Chat objects for the given chat names.
+        """
+        return [self.get_chat(chat_name) for chat_name in chat_names if self.get_chat(chat_name)]
+
+    def export_chats(self, chats: List[Chat], output_dir: str) -> None:
+        """
+        Export the given chats to text files in the specified output directory.
+        
+        Args:
+            chats: List of Chat objects to export.
+            output_dir: Directory to save the exported chat files.
+        """
+        for chat in chats:
+            messages = self.get_messages(chat.chat_identifier)
+            file_name = f"{chat.chat_name}.txt"
+            file_path = Path(output_dir) / file_name
+            
+            with open(file_path, 'w', encoding='utf-8') as f:
+                for message in messages:
+                    f.write(f"{message.timestamp} - {message.sender}: {message.text}\n")
+            
+            print(f"Exported chat {chat.chat_name} to {file_path}")

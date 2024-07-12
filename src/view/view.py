@@ -8,9 +8,7 @@ from typing import List, Dict, Any
 from model.text_collection.chat import Chat
 from model.text_collection.message import Message
 from view.components.toolbar import Toolbar
-from view.components.message_bubble import MessageBubble
 from view.components.welcome_message import WelcomeMessage
-from view.components.chat_view import ChatView
 from view.components.settings import Settings
 from tkinter import filedialog, simpledialog, messagebox
 
@@ -44,7 +42,6 @@ class View(ThemedTk):
         self.style.configure('ChatItem.TFrame', background='#2d2d2d', relief='raised')
         self.style.configure('ChatItem.TLabel', background='#2d2d2d', font=('Helvetica', 12))
 
-        # New styles for improved UI
         self.style.configure('Toolbar.TFrame', background='#1c1c1c')
         self.style.configure('Toolbar.TButton', background='#3d3d3d', foreground='white', font=('Helvetica', 12, 'bold'))
         self.style.configure('Toolbar.TLabel', background='#1c1c1c', foreground='white', font=('Helvetica', 12))
@@ -63,25 +60,20 @@ class View(ThemedTk):
         self.toolbar = Toolbar(self.main_frame)
         self.toolbar.pack(fill=tk.X)
 
-        self.toolbar.add_button("Upload to Google Drive", self.export_chat, position=tk.RIGHT)
-        self.toolbar.add_button("Dump", self.toggle_dump_window, position=tk.RIGHT)
-        self.toolbar.add_button("Reset", self.reset, position=tk.RIGHT)  # Add Reset button
+        self.toolbar.add_button("Export Chats", self.export_chat, position=tk.RIGHT)
+        self.toolbar.add_button("Upload to Google Drive", self.start_google_drive_upload, position=tk.RIGHT)
+        self.toolbar.add_button("Reset", self.reset, position=tk.RIGHT)
 
     def reset(self):
         """Trigger reset event."""
         self.event_generate("<<Reset>>")
 
-    def clear_chat_view(self):
-        """Clear all entries in the chat view."""
-        self.chat_view.clear_messages()
-
     def create_paned_window(self):
-        """Create paned window for chat list, message area, and settings."""
+        """Create paned window for chat list and settings."""
         paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         self.create_chat_list(paned_window)
-        self.create_message_area(paned_window)
         self.create_settings_area(paned_window)
 
     def create_chat_list(self, parent):
@@ -112,11 +104,7 @@ class View(ThemedTk):
         chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.chat_listbox.config(yscrollcommand=chat_scrollbar.set)
-
-    def create_message_area(self, parent):
-        """Create scrollable message display area."""
-        self.chat_view = ChatView(parent)
-        parent.add(self.chat_view, weight=3)
+        self.chat_listbox.bind('<<ListboxSelect>>', self.on_chat_selected)
 
     def create_settings_area(self, parent):
         """Create settings area."""
@@ -132,32 +120,18 @@ class View(ThemedTk):
         self.folder_name = folder_name
 
     def display_chat_name(self, chat_name: str):
-        """Display the chat name in the message area."""
-        self.chat_view.display_chat_name(chat_name)
+        """Display the chat name in the settings area."""
+        self.settings.display_chat_name(chat_name)
 
-    def display_chats(self, chats: List[Chat]):
+    def display_chats(self, chats: List[str]):
         """Display the list of chats in the Listbox."""
         self.threadsafe_call(self._display_chats, chats)
 
-    def _display_chats(self, chats: List[Chat]):
+    def _display_chats(self, chats: List[str]):
         self.chat_listbox.delete(0, tk.END)
-        for chat in chats:
-            display_text = chat.chat_name
-            self.chat_listbox.insert(tk.END, display_text)
+        for chat_name in chats:
+            self.chat_listbox.insert(tk.END, chat_name)
         self.chat_listbox.update_idletasks()
-
-    def display_messages(self, messages: List[Message]):
-        """Display messages for the selected chat."""
-        print("display_messages: count ", len(messages))
-        self.threadsafe_call(self._display_messages, messages)
-
-    def _display_messages(self, messages: List[Message]):
-        self.chat_view.display_messages(messages)
-
-    def on_message_canvas_configure(self, event):
-        """Handle message canvas configuration event."""
-        self.message_canvas.configure(scrollregion=self.message_canvas.bbox("all"))
-        self.message_canvas.itemconfig(self.message_canvas.find_withtag("all")[0], width=event.width)
 
     def load_intro_decision(self):
         """Load user's decision about showing the intro window."""
@@ -184,39 +158,24 @@ class View(ThemedTk):
 
     def export_chat(self):
         """Trigger chat export event."""
+        print("Export button clicked")  # Add this line
         self.event_generate("<<ExportChat>>")
 
-    def toggle_dump_window(self):
-        """Trigger dump window toggle event."""
-        self.event_generate("<<ToggleDumpWindow>>")
+    def start_google_drive_upload(self):
+        """Trigger Google Drive upload event."""
+        self.event_generate("<<StartGoogleDriveUpload>>")
 
     def on_chat_selected(self, event):
         """Handle chat selection event."""
         selection = event.widget.curselection()
         if selection:
             index = selection[0]
-            chat_id = index
-            self.event_generate("<<ChatSelected>>", data=chat_id)
+            chat_name = self.chat_listbox.get(index)
+            self.settings.display_chat_name(chat_name)
 
     def threadsafe_call(self, callback, *args):
         """Execute a callback in a thread-safe manner."""
         self.after(0, callback, *args)
-
-    def notify_dump_complete(self, folder_path: str):
-        """Notify the user that the dump is complete."""
-        messagebox.showinfo("Dump Complete", f"Conversations have been saved to the folder: {folder_path}")
-
-    def get_selected_chat(self):
-        """Get the currently selected chat from the chat listbox."""
-        selected_index = self.chat_listbox.curselection()
-        if selected_index:
-            return self.chat_listbox.get(selected_index)
-        return None
-
-    def start_new_process(self, event):
-        """Start a new process when the user applies the settings."""
-        # Start a new process here
-        print("Starting a new process...")
 
     def notify_export_complete(self, output_dir):
         """Show a notification when the export is complete."""
