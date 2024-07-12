@@ -179,42 +179,68 @@ class TextCollector:
     def _process_message_results(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
         """Process the results of the imessage-exporter command."""
         output_path = "./dump"
-        contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
+        conversations_folder = "./conversations_selected"
         
         # Get the chat from the cache
         chat = next((c for c in self.chat_cache.values() if c.chat_identifier == chat_identifier), None)
         
         if chat:
-            # Use the chat_name property to get the definitive name
-            folder_name = chat.chat_name.replace(', ', '_').replace(' ', '_')
-            if folder_name.endswith('...'):
-                folder_name = folder_name[:-3]  # Remove the trailing '...'
+            folder_name = self._sanitize_folder_name(chat.chat_name)
+            is_group_chat = len(chat.members) > 1
         else:
-            folder_name = contact.name.replace(' ', '_')
-        
-        contact_name = folder_name
-        conversations_folder = "./conversations_selected"
-        new_chat_folder = os.path.join(conversations_folder, folder_name)
-        txt_file = f"{contact_name}.txt"
+            contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
+            folder_name = self._sanitize_folder_name(contact.name)
+            is_group_chat = False
 
+        new_chat_folder = os.path.join(conversations_folder, folder_name)
         os.makedirs(new_chat_folder, exist_ok=True)
 
-        src_txt = os.path.join(output_path, f"{chat_identifier}.txt")
-        dst_txt = os.path.join(new_chat_folder, txt_file)
+        # For group chats, look for a file that starts with the folder name
+        if is_group_chat:
+            possible_files = [f for f in os.listdir(output_path) if f.startswith(folder_name) and f.endswith('.txt')]
+            if possible_files:
+                src_txt = os.path.join(output_path, possible_files[0])
+            else:
+                src_txt = os.path.join(output_path, f"{chat_identifier}.txt")
+        else:
+            # For individual chats, use the chat_identifier
+            src_txt = os.path.join(output_path, f"{chat_identifier}.txt")
+
+        dst_txt = os.path.join(new_chat_folder, f"{folder_name}.txt")
+
         if os.path.exists(src_txt):
             shutil.move(src_txt, dst_txt)
+            print(f"Moved file from {src_txt} to {dst_txt}")
         else:
+            print(f"Source file not found: {src_txt}")
             logging.warning(f"Text file not found for chat: {chat_identifier}")
 
+        # Move attachments
         src_attachments = os.path.join(output_path, f"{chat_identifier}_attachments")
         dst_attachments = os.path.join(new_chat_folder, "attachments")
         if os.path.exists(src_attachments):
             shutil.move(src_attachments, dst_attachments)
+            print(f"Moved attachments to: {dst_attachments}")
         else:
-            logging.info(f"No attachments found for chat: {chat_identifier}")
+            print(f"No attachments found at: {src_attachments}")
 
-        logging.info("Moved files for %s to %s", chat_identifier, new_chat_folder)
+        logging.info("Processed files for %s to %s", chat_identifier, new_chat_folder)
         self._cleanup_dump_folder(output_path)
+
+    def _sanitize_folder_name(self, name):
+        sanitized = name.replace(', ', '_').replace(' ', '_')
+        if sanitized.endswith('...'):
+            sanitized = sanitized[:-3]  # Remove the trailing '...'
+        return sanitized
+
+    def _move_attachments(self, chat_identifier, output_path, new_chat_folder):
+        src_attachments = os.path.join(output_path, f"{chat_identifier}_attachments")
+        dst_attachments = os.path.join(new_chat_folder, "attachments")
+        if os.path.exists(src_attachments):
+            shutil.move(src_attachments, dst_attachments)
+            print(f"Moved attachments to: {dst_attachments}")
+        else:
+            print(f"No attachments found at: {src_attachments}")
 
     def _cleanup_dump_folder(self, output_path: str) -> None:
         """Delete the original ./dump folder after processing."""

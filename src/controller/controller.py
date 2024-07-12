@@ -205,7 +205,7 @@ class Controller:
             formatted_chat_name = formatted_chat_name.replace(",", "")
         # Read the .txt file within the chat folder
         txt_file_path = os.path.join(chat_folder, f"{formatted_chat_name}.txt")
-       
+        print(txt_file_path)
         if not os.path.exists(txt_file_path):
             print(f"Message file not found: {txt_file_path}")
             return
