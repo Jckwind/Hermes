@@ -195,11 +195,12 @@ class TextCollector:
         new_chat_folder = os.path.join(conversations_folder, folder_name)
         os.makedirs(new_chat_folder, exist_ok=True)
 
-        # For group chats, look for a file that starts with the folder name
+        # For group chats, look for a file that matches the folder name (with or without spaces)
         if is_group_chat:
-            possible_files = [f for f in os.listdir(output_path) if f.startswith(folder_name) and f.endswith('.txt')]
-            if possible_files:
-                src_txt = os.path.join(output_path, possible_files[0])
+            possible_files = [f for f in os.listdir(output_path) if f.endswith('.txt')]
+            matching_file = next((f for f in possible_files if f.replace(' ', '_').startswith(folder_name)), None)
+            if matching_file:
+                src_txt = os.path.join(output_path, matching_file)
             else:
                 src_txt = os.path.join(output_path, f"{chat_identifier}.txt")
         else:
