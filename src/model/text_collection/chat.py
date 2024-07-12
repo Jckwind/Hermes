@@ -22,4 +22,15 @@ class Chat:
     @property
     def chat_name(self) -> str:
         """Returns the definitive name of the chat."""
-        return self.display_name if self.display_name else self.chat_identifier
+       
+        if not self.display_name.startswith("chat"):
+            return self.display_name
+        elif len(self.members) > 1:
+            member_names = [member.name for member in self.members[:3]]
+            x = ", ".join(member_names) + ("..." if len(self.members) > 3 else "")
+          
+            return x
+        elif len(self.members) == 1:
+            return self.members[0].name
+        else:
+            return self.chat_identifier

@@ -87,45 +87,27 @@ class TextCollector:
     def _enrich_chats_with_contacts(self, chats: List[Tuple[int, str, str]], contacts_cache: Dict[str, Contact]) -> List[Chat]:
         """Enrich chat data with contact information and return Chat objects."""
         enriched_chats = []
-        
-        with open(self.output_file, 'w', encoding='utf-8') as f:
-            f.write("Chat Details:\n")
-            for chat_id, display_name, chat_identifier in chats:
-                if display_name == '':
-                    contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
-                    display_name = contact.name
+     
+      
+        for chat_id, display_name, chat_identifier in chats:
+            if display_name == '':
+                contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
+                display_name = contact.name
 
-                members = self.get_chat_members(chat_id, contacts_cache)
-                chat = Chat(
+            members = self.get_chat_members(chat_id, contacts_cache)
+            chat = Chat(
                     chat_id=chat_id,
                     display_name=display_name,
                     chat_identifier=chat_identifier,
                     members=members
                 )
                 
-                # Update display name if it starts with "Chat"
-                if chat.display_name.startswith("chat"):
-                    member_names = [member.name for member in chat.members if member.name != chat.display_name]
-                    if len(member_names) >= 2:
-                        chat.display_name = f"{member_names[0]}, {member_names[1]}..."
-                    elif len(member_names) == 1:
-                        chat.display_name = f"{member_names[0]}..."
-                
-                enriched_chats.append(chat)
+                # Use the chat_name property to get the definitive name
+            chat.display_name = chat.chat_name
+          
+            enriched_chats.append(chat)
 
-                # Write chat details to file
-                f.write(f"\nChat ID: {chat.chat_id}\n")
-                f.write(f"Display Name: {chat.display_name}\n")
-                f.write(f"Chat Identifier: {chat.chat_identifier}\n")
-                f.write("Members:\n")
-                for member in chat.members:
-                    f.write(f"  - Name: {member.name}\n")
-                    f.write(f"    Phone: {member.phone_number}\n")
-                    # Add other member attributes if needed
-
-            f.write(f"\nTotal chats processed: {len(enriched_chats)}\n")
-
-        print(f"Chat details have been written to {self.output_file}")
+               
         return enriched_chats
 
     def read_messages(self, chat_identifier: str, contacts_cache: Dict[str, Contact], self_contact: Contact) -> List[Message]:
@@ -164,7 +146,7 @@ class TextCollector:
         """
         imessage_exporter_path = "lib/imessage-exporter/target/release/imessage-exporter"
         output_path = "./dump"
-        self._cleanup_dump_folder(output_path)
+       # self._cleanup_dump_folder(output_path)
         args = [
             "-f", "txt",  # Change export format to txt
             "-o", output_path,  # Output directory
@@ -195,41 +177,52 @@ class TextCollector:
             raise subprocess.CalledProcessError(result[1], command, result[2], result[3])
 
     def _process_message_results(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
-        """Process the results of the imessage-exporter command.
-
-        This method moves the exported files to a chat-specific folder.
-
-        Args:
-            chat_identifier: The identifier of the chat.
-            contacts_cache: A dictionary of contacts, keyed by phone number.
-        """
+        """Process the results of the imessage-exporter command."""
         output_path = "./dump"
         contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
-        folder_name = f"{contact.name.replace(' ', '_')}-conversation"  # Replace spaces with underscores
-        conversations_folder = "./conversations_selected"  # New folder path
-        new_chat_folder = os.path.join(conversations_folder, folder_name)  # Directory named after contact name
-        txt_file = f"{contact.name.replace(' ', '_')}.txt"  # Replace spaces with underscores
-        attachments_folder = "attachments"
+        
+        # Get the chat from the cache
+        chat = next((c for c in self.chat_cache.values() if c.chat_identifier == chat_identifier), None)
+        
+        if chat:
+            # Use the chat_name property to get the definitive name
+            folder_name = chat.chat_name.replace(', ', '_').replace(' ', '_')
+            if folder_name.endswith('...'):
+                folder_name = folder_name[:-3]  # Remove the trailing '...'
+        else:
+            folder_name = contact.name.replace(' ', '_')
+        
+        contact_name = folder_name
+        conversations_folder = "./conversations_selected"
+        new_chat_folder = os.path.join(conversations_folder, folder_name)
+        txt_file = f"{contact_name}.txt"
 
         os.makedirs(new_chat_folder, exist_ok=True)
 
-        src_txt = os.path.join(output_path, f"{chat_identifier}.txt")  # Original file name
+        src_txt = os.path.join(output_path, f"{chat_identifier}.txt")
         dst_txt = os.path.join(new_chat_folder, txt_file)
         if os.path.exists(src_txt):
             shutil.move(src_txt, dst_txt)
+        else:
+            logging.warning(f"Text file not found for chat: {chat_identifier}")
 
-        src_attachments = os.path.join(output_path, attachments_folder)
-        dst_attachments = os.path.join(new_chat_folder, attachments_folder)
+        src_attachments = os.path.join(output_path, f"{chat_identifier}_attachments")
+        dst_attachments = os.path.join(new_chat_folder, "attachments")
         if os.path.exists(src_attachments):
             shutil.move(src_attachments, dst_attachments)
+        else:
+            logging.info(f"No attachments found for chat: {chat_identifier}")
 
         logging.info("Moved files for %s to %s", chat_identifier, new_chat_folder)
         self._cleanup_dump_folder(output_path)
 
     def _cleanup_dump_folder(self, output_path: str) -> None:
         """Delete the original ./dump folder after processing."""
-        if os.path.exists(output_path):
+        try:
             shutil.rmtree(output_path, ignore_errors=True)
+            logging.info(f"Cleaned up dump folder: {output_path}")
+        except Exception as e:
+            logging.error(f"Error cleaning up dump folder: {e}")
 
     def _log_database_error(self, error: sqlite3.Error) -> None:
         """Log database errors.
@@ -280,6 +273,18 @@ class TextCollector:
         """
         lowercase_search_term = search_term.lower()
         return [chat for chat in self.chat_cache.values() if lowercase_search_term in chat.chat_name.lower()]
+
+    def rename_existing_files(self):
+        conversations_folder = "./conversations_selected"
+        for folder_name in os.listdir(conversations_folder):
+            if folder_name.endswith("-conversation"):
+                folder_path = os.path.join(conversations_folder, folder_name)
+                for file_name in os.listdir(folder_path):
+                    if file_name.endswith(".txt"):
+                        old_file_path = os.path.join(folder_path, file_name)
+                        new_file_path = os.path.join(folder_path, f"{folder_name}.txt")
+                        os.rename(old_file_path, new_file_path)
+                        logging.info(f"Renamed {old_file_path} to {new_file_path}")
 
     def __del__(self):
         """Close the database connection when the object is destroyed."""
