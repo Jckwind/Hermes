@@ -188,14 +188,24 @@ class Controller:
         """Process a single chat and save its messages to a .txt file."""
         # Format the folder name to match the format used in conversations_selected
         formatted_chat_name = chat_name.replace(" ", "_")
+      
         base_dir = os.path.join(os.getcwd(), "conversations_selected")
-        chat_folder = os.path.join(base_dir, f"{formatted_chat_name}-conversation")
+        chat_folder = os.path.join(base_dir, f"{formatted_chat_name}")
+        if chat_folder.endswith("..."):
+            chat_folder = chat_folder[:-3]
+            chat_folder = chat_folder.replace(",", "")
+       
         if not os.path.exists(chat_folder):
             print(f"Chat folder not found: {chat_folder}")
             return
 
+
+        if formatted_chat_name.endswith("..."):
+            formatted_chat_name = formatted_chat_name.replace("...", "")
+            formatted_chat_name = formatted_chat_name.replace(",", "")
         # Read the .txt file within the chat folder
         txt_file_path = os.path.join(chat_folder, f"{formatted_chat_name}.txt")
+       
         if not os.path.exists(txt_file_path):
             print(f"Message file not found: {txt_file_path}")
             return
@@ -204,6 +214,7 @@ class Controller:
             messages = f.read()
 
         # Write the contents to the new folder
+      
         chat_filename = f"{chat_name}.txt"
         chat_filepath = os.path.join(output_dir, chat_filename)
         with open(chat_filepath, "w", encoding="utf-8") as f:

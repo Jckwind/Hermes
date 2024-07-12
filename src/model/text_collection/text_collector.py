@@ -272,7 +272,7 @@ class TextCollector:
             A list of Chat objects that match the search term.
         """
         lowercase_search_term = search_term.lower()
-        return [chat for chat in self.chat_cache.values() if lowercase_search_term in chat.chat_name.lower()]
+        return [chat for chat in self.chat_cache.values() if lowercase_search_term in chat.chat_name.lower().rstrip('...')]
 
     def rename_existing_files(self):
         conversations_folder = "./conversations_selected"
