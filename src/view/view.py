@@ -10,6 +10,7 @@ from model.text_collection.message import Message
 from view.components.toolbar import Toolbar
 from view.components.welcome_message import WelcomeMessage
 from view.components.settings import Settings
+from view.components.chat_view import ChatView  # Add this import
 from tkinter import filedialog, simpledialog, messagebox
 
 class View(ThemedTk):
@@ -18,7 +19,7 @@ class View(ThemedTk):
     def __init__(self):
         super().__init__(theme="equilux")
         self.title("Hermes iMessage Viewer")
-        self.geometry("1200x800")
+        self.geometry("1400x900")  # Increased window size
         self.minsize(800, 600)  # Set minimum window size
 
         self.create_styles()
@@ -28,8 +29,6 @@ class View(ThemedTk):
         self.load_intro_decision()
         if self.show_intro:
             self.show_introduction_window()
-
-        self.folder_name = ""
 
     def create_styles(self):
         """Create and configure styles for widgets."""
@@ -46,6 +45,7 @@ class View(ThemedTk):
         self.style.configure('Toolbar.TButton', background='#3d3d3d', foreground='white', font=('Helvetica', 12, 'bold'))
         self.style.configure('Toolbar.TLabel', background='#1c1c1c', foreground='white', font=('Helvetica', 12))
         self.style.configure('Search.TEntry', font=('Helvetica', 12))
+        self.style.configure("Settings.TButton", font=('Helvetica', 10, 'bold'), padding=5, background='#4CAF50', foreground='white')
 
     def create_widgets(self):
         """Create and arrange main widgets."""
@@ -56,24 +56,30 @@ class View(ThemedTk):
         self.create_paned_window()
 
     def create_toolbar(self):
-        """Create toolbar with buttons and search functionality."""
+        """Create toolbar with search functionality and buttons."""
         self.toolbar = Toolbar(self.main_frame)
         self.toolbar.pack(fill=tk.X)
 
-        self.toolbar.add_button("Export Chats", self.export_chat, position=tk.RIGHT)
-        self.toolbar.add_button("Upload to Google Drive", self.start_google_drive_upload, position=tk.RIGHT)
-        self.toolbar.add_button("Reset", self.reset, position=tk.RIGHT)
+        # Create a frame to hold the buttons
+        button_frame = ttk.Frame(self.toolbar)
+        button_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
-    def reset(self):
-        """Trigger reset event."""
-        self.event_generate("<<Reset>>")
+        self.export_button = ttk.Button(button_frame, text="Export Chats", command=self.start_export, style="Settings.TButton")
+        self.export_button.pack(side=tk.RIGHT, pady=10, padx=(5, 10))
+
+        self.upload_button = ttk.Button(button_frame, text="Upload to Google Drive", command=self.start_upload, style="Settings.TButton")
+        self.upload_button.pack(side=tk.RIGHT, pady=10, padx=5)
+
+        self.reset_button = ttk.Button(button_frame, text="Reset Application", command=self.reset_application, style="Settings.TButton")
+        self.reset_button.pack(side=tk.RIGHT, pady=10, padx=(10, 5))
 
     def create_paned_window(self):
-        """Create paned window for chat list and settings."""
+        """Create paned window for chat list, chat view, and settings."""
         paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         self.create_chat_list(paned_window)
+        self.create_chat_view(paned_window)
         self.create_settings_area(paned_window)
 
     def create_chat_list(self, parent):
@@ -106,32 +112,15 @@ class View(ThemedTk):
         self.chat_listbox.config(yscrollcommand=chat_scrollbar.set)
         self.chat_listbox.bind('<<ListboxSelect>>', self.on_chat_selected)
 
+    def create_chat_view(self, parent):
+        """Create chat view area."""
+        self.chat_view = ChatView(parent)
+        parent.add(self.chat_view, weight=4)  # Give 4/6 of the space to chat view
+
     def create_settings_area(self, parent):
         """Create settings area."""
         self.settings = Settings(parent, self)
-        parent.add(self.settings, weight=1)
-
-    def apply_theme(self, theme_name):
-        """Apply the theme for the application."""
-        self.set_theme(theme_name)
-
-    def set_folder_name(self, folder_name: str):
-        """Set the folder name for saving conversations."""
-        self.folder_name = folder_name
-
-    def display_chat_name(self, chat_name: str):
-        """Display the chat name in the settings area."""
-        self.settings.display_chat_name(chat_name)
-
-    def display_chats(self, chats: List[str]):
-        """Display the list of chats in the Listbox."""
-        self.threadsafe_call(self._display_chats, chats)
-
-    def _display_chats(self, chats: List[str]):
-        self.chat_listbox.delete(0, tk.END)
-        for chat_name in chats:
-            self.chat_listbox.insert(tk.END, chat_name)
-        self.chat_listbox.update_idletasks()
+        parent.add(self.settings, weight=1)  # Give 1/6 of the space to settings
 
     def load_intro_decision(self):
         """Load user's decision about showing the intro window."""
@@ -156,21 +145,13 @@ class View(ThemedTk):
         welcome_message.wait_window()
         self.load_intro_decision()  # Reload the decision after closing the window
 
-    def export_chat(self):
-        """Trigger chat export event."""
-        print("Export button clicked")  # Add this line
-        self.event_generate("<<ExportChat>>")
-
-    def start_google_drive_upload(self):
-        """Trigger Google Drive upload event."""
-        self.event_generate("<<StartGoogleDriveUpload>>")
-
     def on_chat_selected(self, event):
         """Handle chat selection event."""
         selection = event.widget.curselection()
         if selection:
             index = selection[0]
             chat_name = self.chat_listbox.get(index)
+            self.chat_view.display_chat_name(chat_name)
             self.settings.display_chat_name(chat_name)
 
     def threadsafe_call(self, callback, *args):
@@ -188,6 +169,25 @@ class View(ThemedTk):
     def show_error(self, title, message):
         """Show an error message to the user."""
         messagebox.showerror(title, message)
+
+    def display_chats(self, chats: List[str]):
+        """Display the list of chats in the Listbox."""
+        self.chat_listbox.delete(0, tk.END)
+        for chat_name in chats:
+            self.chat_listbox.insert(tk.END, chat_name)
+        self.chat_listbox.update_idletasks()
+
+    def start_export(self):
+        """Start the export process."""
+        self.event_generate("<<StartExport>>")
+
+    def start_upload(self):
+        """Start the Google Drive upload process."""
+        self.event_generate("<<StartGoogleDriveUpload>>")
+
+    def reset_application(self):
+        """Reset the application."""
+        self.event_generate("<<ResetApplication>>")
 
 if __name__ == "__main__":
     app = View()

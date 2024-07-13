@@ -21,17 +21,27 @@ class Settings(ttk.Frame):
         self.label = ttk.Label(self.inner_frame, text="Settings", style="Heading.TLabel")
         self.label.pack(pady=10, anchor='center')
 
-        self.export_button = ttk.Button(self.inner_frame, text="Export Chats", command=self.start_export, style="Settings.TButton")
-        self.export_button.pack(pady=10, padx=10)
-
-        self.upload_button = ttk.Button(self.inner_frame, text="Upload to Google Drive", command=self.start_upload, style="Settings.TButton")
-        self.upload_button.pack(pady=10, padx=10)
-
-        self.reset_button = ttk.Button(self.inner_frame, text="Reset Application", command=self.reset_application, style="Settings.TButton")
-        self.reset_button.pack(pady=10, padx=10)
+        # Add the folder name input section
+        self.create_folder_name_input()
 
         # Add the chat view functionality
         self.create_chat_view()
+
+    def create_folder_name_input(self):
+        """Create and configure the folder name input section."""
+        folder_frame = ttk.Frame(self.inner_frame)
+        folder_frame.pack(pady=10, padx=10, fill='x')
+
+        folder_label = ttk.Label(folder_frame, text="Name your folder here:", style="SubHeading.TLabel")
+        folder_label.pack(anchor='w', pady=(0, 5))
+
+        self.folder_name_var = tk.StringVar()
+        folder_entry = ttk.Entry(folder_frame, textvariable=self.folder_name_var, style='Settings.TEntry')
+        folder_entry.pack(fill='x')
+
+        # Add the submit button
+        submit_button = ttk.Button(folder_frame, text="Submit", style="Settings.TButton", command=self.on_submit)
+        submit_button.pack(pady=(10, 0), anchor='center')
 
     def create_chat_view(self):
         """Create and configure the chat view widgets."""
@@ -90,8 +100,16 @@ class Settings(ttk.Frame):
     def _configure_styles(self):
         """Configure custom styles for widgets."""
         style = ttk.Style()
-        style.configure("Heading.TLabel", font=('Helvetica', 16, 'bold'), foreground='#4CAF50', padding=10)
+        style.configure("Heading.TLabel", font=('Helvetica', 16, 'bold'), foreground='#4CAF50', padding=10, background='#2d2d2d')
+        style.configure("SubHeading.TLabel", font=('Helvetica', 12, 'bold'), foreground='white', background='#2d2d2d')
         style.configure("Settings.TButton", font=('Helvetica', 10, 'bold'), padding=5, background='#4CAF50', foreground='white')
+        style.configure("Settings.TEntry", font=('Helvetica', 10), padding=5, background='#3d3d3d', foreground='white')
+
+    def on_submit(self):
+        """Handle submit button click."""
+        # This method is a placeholder for future functionality
+        folder_name = self.folder_name_var.get()
+        print(f"Submitted folder name: {folder_name}")
 
     def start_export(self):
         """Start the export process."""
