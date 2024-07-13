@@ -113,7 +113,7 @@ class View(ThemedTk):
         self.chat_listbox.bind('<<ListboxSelect>>', self.on_chat_selected)
 
     def create_chat_view(self, parent):
-        """Create chat view area."""
+        """Create chat view area with an empty canvas."""
         self.chat_view = ChatView(parent)
         parent.add(self.chat_view, weight=4)  # Give 4/6 of the space to chat view
 
@@ -151,7 +151,6 @@ class View(ThemedTk):
         if selection:
             index = selection[0]
             chat_name = self.chat_listbox.get(index)
-            self.chat_view.display_chat_name(chat_name)
             self.settings.display_chat_name(chat_name)
 
     def threadsafe_call(self, callback, *args):
@@ -171,7 +170,7 @@ class View(ThemedTk):
         messagebox.showerror(title, message)
 
     def display_chats(self, chats: List[str]):
-        """Display the list of chats in the Listbox."""
+        """Display the list of chats in the Listbox only."""
         self.chat_listbox.delete(0, tk.END)
         for chat_name in chats:
             self.chat_listbox.insert(tk.END, chat_name)

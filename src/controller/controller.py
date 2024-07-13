@@ -24,6 +24,14 @@ class Controller:
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
         self._view.search_var.trace("w", self._on_search)
 
+    def _on_search(self, *args) -> None:
+        """Handle search bar input event."""
+        search_term = self._view.search_var.get().lower()
+        filtered_chats = self._model.text_collector.search_chats(search_term)
+        
+        # Update only the main chat list
+        self._view.display_chats(filtered_chats)
+
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
         print("Export event received")
@@ -80,14 +88,6 @@ class Controller:
         """Handle toggle dump window event."""
         # Implement the logic for toggling the dump window
         pass
-
-    def _on_search(self, *args) -> None:
-        """Handle search bar input event."""
-        search_term = self._view.search_var.get().lower()
-        filtered_chats = self._model.text_collector.search_chats(search_term)
-        
-        # Instead of updating the main chat list, update only the settings area
-        self._view.settings.display_chats(filtered_chats)
 
     def _wait_for_conversations(self, chat_names: List[str], timeout: int = 60) -> None:
         """Wait for conversations to be populated in the conversations_selected folder."""
@@ -147,7 +147,6 @@ class Controller:
 
     def run(self) -> None:
         """Load chats and start the main event loop."""
-        # Load chats only once at the start
         chats = self._model.get_chats()
         chat_names = [chat.chat_name for chat in chats]  # Extract chat names
         self._view.display_chats(chat_names)  # This will set the main chat list once
