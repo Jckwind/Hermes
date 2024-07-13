@@ -193,6 +193,9 @@ class View(ThemedTk):
     def reset_application(self):
         """Reset the application."""
         self.event_generate("<<ResetApplication>>")
+        self.settings.clear_exported_files_list()
+        self.chat_view.clear()  # Assuming you have a clear method in ChatView
+        self.selected_exported_file = None
 
     def on_exported_file_selected(self, event):
         """Handle exported file selection event."""

@@ -26,6 +26,9 @@ class ChatView(ttk.Frame):
     def clear(self):
         """Clear the canvas."""
         self.canvas.delete("all")
+        self.text_widget.delete(1.0, tk.END)
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.text_widget.pack_forget()
 
     def start_loading_animation(self):
         """Start the loading animation."""

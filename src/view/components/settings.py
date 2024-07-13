@@ -169,3 +169,7 @@ class Settings(ttk.Frame):
         self.exported_listbox.delete(0, tk.END)
         for filename in filenames:
             self.exported_listbox.insert(tk.END, filename)
+
+    def clear_exported_files_list(self):
+        """Clear the exported files list."""
+        self.exported_listbox.delete(0, tk.END)
