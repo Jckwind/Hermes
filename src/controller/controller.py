@@ -36,7 +36,6 @@ class Controller:
 
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
-        print("Export event received")
         self._view.after(0, self._view.chat_view.start_loading_animation)
         
         # Run the export process in a separate thread
@@ -74,7 +73,7 @@ class Controller:
         self._view.after(0, lambda: self._view.notify_export_complete(output_dir))
 
         # After export is complete, update the exported files list
-        exported_files = os.listdir(output_dir)
+        exported_files = [f for f in os.listdir(output_dir) if f.endswith('.txt')]
         self._view.after(0, self._view.update_exported_files_list, exported_files)
 
     def _on_start_google_drive_upload(self, event=None) -> None:
@@ -98,8 +97,6 @@ class Controller:
         self._delete_folder("./conversations_selected")
         self._delete_folder("./exported_chats")
 
-        print("Application reset complete")
-
     def _on_toggle_dump_window(self, event: object) -> None:
         """Handle toggle dump window event."""
         # Implement the logic for toggling the dump window
@@ -117,8 +114,6 @@ class Controller:
                 self._view.display_file_content(content)
             else:
                 self._view.show_error("File not found", f"The file {filename} could not be found.")
-        else:
-            print("No file selected")
 
     def _wait_for_conversations(self, chat_names: List[str], timeout: int = 60) -> None:
         """Wait for conversations to be populated in the conversations_selected folder."""
@@ -137,12 +132,9 @@ class Controller:
                     break
 
             if all_conversations_ready:
-                print("All conversations are ready for export.")
                 return
 
             time.sleep(1)  # Wait for 1 second before checking again
-
-        print("Timeout waiting for conversations to be populated.")
 
     def _sanitize_folder_name(self, name: str) -> str:
         """Sanitize the folder name to match the one created by the text collector."""
@@ -159,22 +151,19 @@ class Controller:
 
         if os.path.exists(source_file):
             shutil.copy(source_file, chat_filepath)
-            print(f"Exported chat {chat.chat_name} to {chat_filepath}")
-        else:
-            print(f"Source file not found for chat {chat.chat_name}")
 
     def _upload_to_google_drive(self, output_dir: str) -> None:
         """Upload exported chats to Google Drive."""
         google_drive_upload_script = os.path.join(os.path.dirname(__file__), '../model/google_drive_upload/google_drive_upload.py')
         for filename in os.listdir(output_dir):
-            file_path = os.path.join(output_dir, filename)
-            subprocess.run(["python", google_drive_upload_script, file_path])
+            if filename.endswith('.txt'):
+                file_path = os.path.join(output_dir, filename)
+                subprocess.run(["python", google_drive_upload_script, file_path])
 
     def _delete_folder(self, folder_path: str) -> None:
         """Delete a folder and its contents."""
         if os.path.exists(folder_path):
             shutil.rmtree(folder_path)
-            print(f"Deleted folder: {folder_path}")
 
     def run(self) -> None:
         """Load chats and start the main event loop."""
