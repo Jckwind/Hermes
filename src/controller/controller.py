@@ -6,6 +6,7 @@ from typing import List, Dict
 from model.model import Model
 from view.view import View
 from model.text_collection.chat import Chat
+import threading
 
 class Controller:
     """Controller class for managing interactions between Model and View."""
@@ -35,6 +36,13 @@ class Controller:
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
         print("Export event received")
+        self._view.after(0, self._view.chat_view.start_loading_animation)
+        
+        # Run the export process in a separate thread
+        export_thread = threading.Thread(target=self._run_export_process)
+        export_thread.start()
+
+    def _run_export_process(self):
         folder_name = "exported_chats"
         output_dir = os.path.join(os.getcwd(), folder_name)
         os.makedirs(output_dir, exist_ok=True)
@@ -59,7 +67,10 @@ class Controller:
             if chat:
                 self._export_chat(chat, output_dir)
 
-        self._view.notify_export_complete(output_dir)
+        # Use after to schedule UI updates on the main thread
+        self._view.after(0, self._view.chat_view.stop_loading_animation)
+        self._view.after(0, lambda: self._view.chat_view.show_completion_message("Export Complete!"))
+        self._view.after(0, lambda: self._view.notify_export_complete(output_dir))
 
     def _on_start_google_drive_upload(self, event=None) -> None:
         """Handle Google Drive upload process."""

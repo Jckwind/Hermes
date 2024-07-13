@@ -159,6 +159,7 @@ class View(ThemedTk):
 
     def notify_export_complete(self, output_dir):
         """Show a notification when the export is complete."""
+        self.chat_view.show_completion_message(f"Export Complete!\nChats exported to:\n{output_dir}")
         messagebox.showinfo("Export Complete", f"Chats have been exported to:\n{output_dir}")
 
     def notify_upload_complete(self):
