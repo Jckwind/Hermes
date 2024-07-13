@@ -16,12 +16,16 @@ class ChatView(ttk.Frame):
 
     def _create_widgets(self):
         """Create and configure the widgets for the chat view."""
-        self.canvas = tk.Canvas(self, bg='#2d2d2d')
+        self.canvas = tk.Canvas(self, bg='#2d2d2d', highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        self.text_widget = tk.Text(self, wrap=tk.WORD, bg='#2d2d2d', fg='white')
+        self.text_widget = tk.Text(self, wrap=tk.WORD, bg='#2d2d2d', fg='white', font=('Helvetica', 12))
         self.text_widget.pack(fill=tk.BOTH, expand=True)
         self.text_widget.pack_forget()  # Hide it initially
+
+        # Add a custom scrollbar
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.text_widget.yview)
+        self.text_widget.configure(yscrollcommand=self.scrollbar.set)
 
     def clear(self):
         """Clear the canvas."""
@@ -43,9 +47,7 @@ class ChatView(ttk.Frame):
 
     def _animate_loading(self):
         """Animate the loading circle."""
-      
         if not self.is_animating:
-           
             return
 
         self.clear()
@@ -55,13 +57,24 @@ class ChatView(ttk.Frame):
         start_angle = self.angle
         extent = 300
 
-        self.canvas.create_arc(center_x - radius, center_y - radius,
-                               center_x + radius, center_y + radius,
-                               start=start_angle, extent=extent,
-                               outline="#4CAF50", width=10, style=tk.ARC)
+        # Draw multiple arcs for a more interesting animation
+        for i in range(3):
+            color = self._interpolate_color("#4CAF50", "#2196F3", i / 2)
+            self.canvas.create_arc(center_x - radius + i*10, center_y - radius + i*10,
+                                   center_x + radius - i*10, center_y + radius - i*10,
+                                   start=start_angle + i*20, extent=extent - i*40,
+                                   outline=color, width=5, style=tk.ARC)
 
         self.angle = (self.angle + self.angle_increment) % 360
-        self.after(self.animation_delay, self._animate_loading)  # Use the new animation_delay
+        self.after(self.animation_delay, self._animate_loading)
+
+    def _interpolate_color(self, color1, color2, factor):
+        r1, g1, b1 = int(color1[1:3], 16), int(color1[3:5], 16), int(color1[5:7], 16)
+        r2, g2, b2 = int(color2[1:3], 16), int(color2[3:5], 16), int(color2[5:7], 16)
+        r = int(r1 + factor * (r2 - r1))
+        g = int(g1 + factor * (g2 - g1))
+        b = int(b1 + factor * (b2 - b1))
+        return f"#{r:02x}{g:02x}{b:02x}"
 
     def show_completion_message(self, message):
         """Display a completion message on the canvas."""
@@ -74,9 +87,17 @@ class ChatView(ttk.Frame):
         """Display the content of a file in the text widget."""
         self.clear()
         self.canvas.pack_forget()
-        self.text_widget.pack(fill=tk.BOTH, expand=True)
+        self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.insert(tk.END, content)
+
+        # Add syntax highlighting (you'll need to implement this based on your content)
+        self.apply_syntax_highlighting()
+
+    def apply_syntax_highlighting(self):
+        # Implement syntax highlighting logic here
+        pass
 
     def hide_file_content(self):
         """Hide the text widget and show the canvas."""

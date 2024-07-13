@@ -10,7 +10,7 @@ from model.text_collection.message import Message
 from view.components.toolbar import Toolbar
 from view.components.welcome_message import WelcomeMessage
 from view.components.settings import Settings
-from view.components.chat_view import ChatView  # Add this import
+from view.components.chat_view import ChatView
 from tkinter import filedialog, simpledialog, messagebox
 
 class View(ThemedTk):
@@ -106,9 +106,15 @@ class View(ThemedTk):
                                        exportselection=0,
                                        bg='#2d2d2d',
                                        fg='white',
-                                       selectbackground='#4d4d4d',
+                                       selectbackground='#4CAF50',  # Change to a more vibrant color
                                        selectforeground='white',
-                                       font=('Helvetica', 20))
+                                       font=('Helvetica', 14))  # Reduced font size for better readability
+        
+        # Add hover effect
+        self.chat_listbox.bind("<Enter>", self.on_listbox_enter)
+        self.chat_listbox.bind("<Leave>", self.on_listbox_leave)
+        self.chat_listbox.bind("<Motion>", self.on_listbox_motion)
+        
         self.chat_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         chat_scrollbar = ttk.Scrollbar(chat_frame, orient=tk.VERTICAL, command=self.chat_listbox.yview)
@@ -116,6 +122,17 @@ class View(ThemedTk):
 
         self.chat_listbox.config(yscrollcommand=chat_scrollbar.set)
         self.chat_listbox.bind('<<ListboxSelect>>', self.on_chat_selected)
+
+    def on_listbox_enter(self, event):
+        self.chat_listbox.config(cursor="hand2")
+
+    def on_listbox_leave(self, event):
+        self.chat_listbox.config(cursor="")
+
+    def on_listbox_motion(self, event):
+        index = self.chat_listbox.nearest(event.y)
+        self.chat_listbox.selection_clear(0, tk.END)
+        self.chat_listbox.selection_set(index)
 
     def create_chat_view(self, parent):
         """Create chat view area with an empty canvas."""
