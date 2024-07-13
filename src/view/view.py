@@ -30,6 +30,8 @@ class View(ThemedTk):
         if self.show_intro:
             self.show_introduction_window()
 
+        self.selected_exported_file = None  # Add this line
+
     def create_styles(self):
         """Create and configure styles for widgets."""
         self.style = ttk.Style(self)
@@ -54,6 +56,9 @@ class View(ThemedTk):
 
         self.create_toolbar()
         self.create_paned_window()
+
+        # Bind the exported file selected event
+        self.bind("<<ExportedFileSelected>>", self.on_exported_file_selected)
 
     def create_toolbar(self):
         """Create toolbar with search functionality and buttons."""
@@ -188,6 +193,19 @@ class View(ThemedTk):
     def reset_application(self):
         """Reset the application."""
         self.event_generate("<<ResetApplication>>")
+
+    def on_exported_file_selected(self, event):
+        """Handle exported file selection event."""
+        if self.selected_exported_file:
+            self.event_generate("<<LoadExportedFile>>")
+
+    def update_exported_files_list(self, filenames):
+        """Update the list of exported files in the settings area."""
+        self.settings.update_exported_files_list(filenames)
+
+    def display_file_content(self, content):
+        """Display the content of a file in the chat view."""
+        self.chat_view.show_file_content(content)
 
 if __name__ == "__main__":
     app = View()

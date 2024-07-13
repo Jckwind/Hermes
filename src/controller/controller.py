@@ -23,6 +23,7 @@ class Controller:
         self._view.bind("<<StartGoogleDriveUpload>>", self._on_start_google_drive_upload)
         self._view.bind("<<ResetApplication>>", self._on_reset)
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
+        self._view.bind("<<LoadExportedFile>>", self._on_load_exported_file)
         self._view.search_var.trace("w", self._on_search)
 
     def _on_search(self, *args) -> None:
@@ -72,6 +73,10 @@ class Controller:
         self._view.after(0, lambda: self._view.chat_view.show_completion_message("Export Complete!"))
         self._view.after(0, lambda: self._view.notify_export_complete(output_dir))
 
+        # After export is complete, update the exported files list
+        exported_files = os.listdir(output_dir)
+        self._view.after(0, self._view.update_exported_files_list, exported_files)
+
     def _on_start_google_drive_upload(self, event=None) -> None:
         """Handle Google Drive upload process."""
         folder_name = "exported_chats"
@@ -99,6 +104,21 @@ class Controller:
         """Handle toggle dump window event."""
         # Implement the logic for toggling the dump window
         pass
+
+    def _on_load_exported_file(self, event):
+        """Handle loading an exported file."""
+        filename = self._view.selected_exported_file
+        if filename:
+            file_path = os.path.join(os.getcwd(), "exported_chats", filename)
+            
+            if os.path.exists(file_path):
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                self._view.display_file_content(content)
+            else:
+                self._view.show_error("File not found", f"The file {filename} could not be found.")
+        else:
+            print("No file selected")
 
     def _wait_for_conversations(self, chat_names: List[str], timeout: int = 60) -> None:
         """Wait for conversations to be populated in the conversations_selected folder."""

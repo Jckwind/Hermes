@@ -12,12 +12,16 @@ class ChatView(ttk.Frame):
         self.is_animating = False
         self.angle = 0
         self.angle_increment = 15  # Increased from 10 to 15
-        self.animation_delay = 30  # Decreased from 50 to 30 milliseconds
+        self.animation_delay = 10  # Decreased from 50 to 30 milliseconds
 
     def _create_widgets(self):
         """Create and configure the widgets for the chat view."""
         self.canvas = tk.Canvas(self, bg='#2d2d2d')
         self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.text_widget = tk.Text(self, wrap=tk.WORD, bg='#2d2d2d', fg='white')
+        self.text_widget.pack(fill=tk.BOTH, expand=True)
+        self.text_widget.pack_forget()  # Hide it initially
 
     def clear(self):
         """Clear the canvas."""
@@ -62,3 +66,16 @@ class ChatView(ttk.Frame):
         center_x = self.canvas.winfo_width() // 2
         center_y = self.canvas.winfo_height() // 2
         self.canvas.create_text(center_x, center_y, text=message, fill="white", font=("Helvetica", 16, "bold"))
+
+    def show_file_content(self, content):
+        """Display the content of a file in the text widget."""
+        self.clear()
+        self.canvas.pack_forget()
+        self.text_widget.pack(fill=tk.BOTH, expand=True)
+        self.text_widget.delete(1.0, tk.END)
+        self.text_widget.insert(tk.END, content)
+
+    def hide_file_content(self):
+        """Hide the text widget and show the canvas."""
+        self.text_widget.pack_forget()
+        self.canvas.pack(fill=tk.BOTH, expand=True)

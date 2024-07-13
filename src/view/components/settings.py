@@ -27,6 +27,9 @@ class Settings(ttk.Frame):
         # Add the chat view functionality
         self.create_chat_view()
 
+        # Add the exported files list
+        self.create_exported_files_list()
+
     def create_folder_name_input(self):
         """Create and configure the folder name input section."""
         folder_frame = ttk.Frame(self.inner_frame)
@@ -58,6 +61,19 @@ class Settings(ttk.Frame):
         self.scrollbar.pack(side=tk.RIGHT, fill="y")
 
         self._bind_chat_events()
+
+    def create_exported_files_list(self):
+        """Create and configure the exported files list section."""
+        exported_frame = ttk.Frame(self.inner_frame)
+        exported_frame.pack(pady=10, padx=10, fill='x')
+
+        exported_label = ttk.Label(exported_frame, text="Exported Files:", style="SubHeading.TLabel")
+        exported_label.pack(anchor='w', pady=(0, 5))
+
+        self.exported_listbox = tk.Listbox(exported_frame, selectmode=tk.SINGLE, bg='#3d3d3d', fg='white')
+        self.exported_listbox.pack(fill='x', expand=True)
+
+        self.exported_listbox.bind('<<ListboxSelect>>', self.on_exported_file_selected)
 
     def _bind_chat_events(self):
         """Bind events for the chat view."""
@@ -138,3 +154,18 @@ class Settings(ttk.Frame):
         self.clear_messages()
         for chat_name in chat_names:
             self.display_chat_name(chat_name)
+
+    def on_exported_file_selected(self, event):
+        """Handle exported file selection event."""
+        selection = self.exported_listbox.curselection()
+        if selection:
+            index = selection[0]
+            filename = self.exported_listbox.get(index)
+            self.view.event_generate("<<ExportedFileSelected>>")
+            self.view.selected_exported_file = filename
+
+    def update_exported_files_list(self, filenames):
+        """Update the list of exported files."""
+        self.exported_listbox.delete(0, tk.END)
+        for filename in filenames:
+            self.exported_listbox.insert(tk.END, filename)

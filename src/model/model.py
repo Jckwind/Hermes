@@ -6,6 +6,7 @@ from .contacts_collection.contacts import ContactsCollector
 from .contacts_collection.contact import Contact
 import json
 from pathlib import Path
+import os
 
 class Model:
     """Model class for the Hermes iMessage Viewer application.
@@ -144,3 +145,10 @@ class Model:
                     f.write(f"{message.timestamp} - {message.sender}: {message.text}\n")
             
             print(f"Exported chat {chat.chat_name} to {file_path}")
+
+    def get_exported_files(self) -> List[str]:
+        """Get a list of exported chat files."""
+        export_dir = os.path.join(os.getcwd(), "exported_chats")
+        if os.path.exists(export_dir):
+            return [f for f in os.listdir(export_dir) if f.endswith('.txt')]
+        return []
