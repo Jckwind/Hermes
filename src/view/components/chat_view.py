@@ -6,7 +6,7 @@ class ChatView(ttk.Frame):
     """A custom widget for displaying an empty canvas with loading animation."""
 
     def __init__(self, master, *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
+        super().__init__(master, style='ChatView.TFrame', *args, **kwargs)
         self.parent = master
         self._create_widgets()
         self.is_animating = False

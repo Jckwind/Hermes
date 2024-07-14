@@ -4,7 +4,7 @@ from typing import List
 
 class Settings(ttk.Frame):
     def __init__(self, parent, view, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
+        super().__init__(parent, style='Settings.TFrame', *args, **kwargs)
         self.view = view
         self.create_widgets()
 
@@ -38,7 +38,7 @@ class Settings(ttk.Frame):
         folder_label = ttk.Label(folder_frame, text="Name your folder here:", style="SubHeading.TLabel")
         folder_label.pack(anchor='w', pady=(0, 5))
 
-        self.folder_name_var = tk.StringVar()
+        self.folder_name_var = tk.StringVar(value="exported_chats")  # Set default value
         folder_entry = ttk.Entry(folder_frame, textvariable=self.folder_name_var, style='Settings.TEntry')
         folder_entry.pack(fill='x')
 
@@ -103,7 +103,7 @@ class Settings(ttk.Frame):
             self.tree.xview_scroll(-1, "units")
         elif event.delta < 0:
             self.tree.xview_scroll(1, "units")
-        
+
     def get_displayed_chats(self) -> List[str]:
         """Retrieve the list of chat names currently displayed in the Treeview."""
         return [self.tree.item(item, "values")[0] for item in self.tree.get_children()]

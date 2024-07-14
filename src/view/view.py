@@ -11,6 +11,7 @@ from view.components.toolbar import Toolbar
 from view.components.welcome_message import WelcomeMessage
 from view.components.settings import Settings
 from view.components.chat_view import ChatView
+from view.components.chat_list import ChatList
 from tkinter import filedialog, simpledialog, messagebox
 
 class View(ThemedTk):
@@ -19,35 +20,88 @@ class View(ThemedTk):
     def __init__(self):
         super().__init__(theme="equilux")
         self.title("Hermes iMessage Viewer")
-        self.geometry("1400x900")  # Increased window size
-        self.minsize(800, 600)  # Set minimum window size
+        self.geometry("1400x900")
+        self.minsize(800, 600)
 
         self.create_styles()
         self.create_widgets()
+
+        self.pack_propagate(False)
 
         self.show_intro = True
         self.load_intro_decision()
         if self.show_intro:
             self.show_introduction_window()
 
-        self.selected_exported_file = None  # Add this line
+        self.selected_exported_file = None
 
     def create_styles(self):
         """Create and configure styles for widgets."""
         self.style = ttk.Style(self)
-        self.style.configure('TFrame', background='#2d2d2d')
-        self.style.configure('TButton', font=('Helvetica', 12))
-        self.style.configure('TLabel', font=('Helvetica', 12))
-        self.style.configure('Chat.TFrame', background='#2d2d2d')
-        self.style.configure('Message.TFrame', background='#3d3d3d')
-        self.style.configure('ChatItem.TFrame', background='#2d2d2d', relief='raised')
-        self.style.configure('ChatItem.TLabel', background='#2d2d2d', font=('Helvetica', 12))
 
+        # Define common colors
+        bg_color = '#2d2d2d'
+        fg_color = 'white'
+        accent_color = '#4CAF50'
+
+        # Configure common styles
+        self.style.configure('TFrame', background=bg_color)
+        self.style.configure('TLabel', background=bg_color, foreground=fg_color, font=('Helvetica', 12))
+        self.style.configure('TButton', font=('Helvetica', 12), background=accent_color, foreground=fg_color)
+
+        # Configure specific styles
         self.style.configure('Toolbar.TFrame', background='#1c1c1c')
-        self.style.configure('Toolbar.TButton', background='#3d3d3d', foreground='white', font=('Helvetica', 12, 'bold'))
-        self.style.configure('Toolbar.TLabel', background='#1c1c1c', foreground='white', font=('Helvetica', 12))
-        self.style.configure('Search.TEntry', font=('Helvetica', 12))
-        self.style.configure("Settings.TButton", font=('Helvetica', 10, 'bold'), padding=5, background='#4CAF50', foreground='white')
+        self.style.configure('Toolbar.TButton', background='#3d3d3d', foreground=fg_color, font=('Helvetica', 12, 'bold'))
+        self.style.configure('Toolbar.TLabel', background='#1c1c1c', foreground=fg_color, font=('Helvetica', 12))
+
+        self.style.configure('Search.TEntry',
+                             font=('Helvetica', 12),
+                             fieldbackground='#3d3d3d',
+                             foreground=fg_color,
+                             insertcolor=fg_color,
+                             borderwidth=2,
+                             relief='solid')
+
+        self.style.configure('Clear.TButton',
+                             font=('Helvetica', 10, 'bold'),
+                             background='#3d3d3d',
+                             foreground=fg_color,
+                             borderwidth=2,
+                             relief='solid')
+
+        self.style.map('Clear.TButton',
+                       background=[('active', '#4d4d4d')])
+
+        self.style.configure('ChatList.TFrame', background=bg_color, borderwidth=2, relief='solid')
+        self.style.configure('ChatView.TFrame', background=bg_color, borderwidth=2, relief='solid')
+        self.style.configure('Settings.TFrame', background=bg_color, borderwidth=2, relief='solid')
+
+        self.style.configure('Settings.TButton',
+                             font=('Helvetica', 10, 'bold'),
+                             padding=5,
+                             background=accent_color,
+                             foreground=fg_color,
+                             borderwidth=2,
+                             relief='solid')
+
+        self.style.configure('Settings.TEntry',
+                             font=('Helvetica', 10),
+                             padding=5,
+                             background='#3d3d3d',
+                             foreground=fg_color,
+                             borderwidth=2,
+                             relief='solid')
+
+        self.style.configure('Treeview',
+                             background=bg_color,
+                             foreground=fg_color,
+                             fieldbackground=bg_color,
+                             borderwidth=2,
+                             relief='solid')
+
+        self.style.map('Treeview',
+                       background=[('selected', accent_color)],
+                       foreground=[('selected', fg_color)])
 
     def create_widgets(self):
         """Create and arrange main widgets."""
@@ -57,15 +111,16 @@ class View(ThemedTk):
         self.create_toolbar()
         self.create_paned_window()
 
-        # Bind the exported file selected event
         self.bind("<<ExportedFileSelected>>", self.on_exported_file_selected)
+
+        # Set the search bar width after creating all widgets
+        self.after(100, self.set_search_bar_width)
 
     def create_toolbar(self):
         """Create toolbar with search functionality and buttons."""
         self.toolbar = Toolbar(self.main_frame)
-        self.toolbar.pack(fill=tk.X)
+        self.toolbar.pack(fill=tk.X, pady=(0, 5))
 
-        # Create a frame to hold the buttons
         button_frame = ttk.Frame(self.toolbar)
         button_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -78,71 +133,36 @@ class View(ThemedTk):
         self.reset_button = ttk.Button(button_frame, text="Reset Application", command=self.reset_application, style="Settings.TButton")
         self.reset_button.pack(side=tk.RIGHT, pady=10, padx=(10, 5))
 
+    def set_search_bar_width(self):
+        """Set the search bar width to match the chat list width."""
+        chat_list_width = self.chat_list.winfo_width()
+        char_width = int(chat_list_width / 10)  # Approximate character width
+        self.toolbar.set_search_width(char_width)
+
     def create_paned_window(self):
         """Create paned window for chat list, chat view, and settings."""
         paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
-        paned_window.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
 
         self.create_chat_list(paned_window)
         self.create_chat_view(paned_window)
         self.create_settings_area(paned_window)
 
     def create_chat_list(self, parent):
-        """Create scrollable chat list area using Listbox."""
-        chat_frame = ttk.Frame(parent)
-        parent.add(chat_frame, weight=1)
-
-        self.search_var = tk.StringVar()
-        search_entry = ttk.Entry(chat_frame, textvariable=self.search_var, style='Search.TEntry')
-        search_entry.pack(fill=tk.X, padx=5, pady=5)
-
-        self.chat_listbox = tk.Listbox(chat_frame,
-                                       width=25,
-                                       selectmode=tk.SINGLE,
-                                       activestyle='none',
-                                       highlightthickness=0,
-                                       bd=0,
-                                       relief=tk.FLAT,
-                                       exportselection=0,
-                                       bg='#2d2d2d',
-                                       fg='white',
-                                       selectbackground='#4CAF50',  # Change to a more vibrant color
-                                       selectforeground='white',
-                                       font=('Helvetica', 14))  # Reduced font size for better readability
-        
-        # Add hover effect
-        self.chat_listbox.bind("<Enter>", self.on_listbox_enter)
-        self.chat_listbox.bind("<Leave>", self.on_listbox_leave)
-        self.chat_listbox.bind("<Motion>", self.on_listbox_motion)
-        
-        self.chat_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        chat_scrollbar = ttk.Scrollbar(chat_frame, orient=tk.VERTICAL, command=self.chat_listbox.yview)
-        chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        self.chat_listbox.config(yscrollcommand=chat_scrollbar.set)
-        self.chat_listbox.bind('<<ListboxSelect>>', self.on_chat_selected)
-
-    def on_listbox_enter(self, event):
-        self.chat_listbox.config(cursor="hand2")
-
-    def on_listbox_leave(self, event):
-        self.chat_listbox.config(cursor="")
-
-    def on_listbox_motion(self, event):
-        index = self.chat_listbox.nearest(event.y)
-        self.chat_listbox.selection_clear(0, tk.END)
-        self.chat_listbox.selection_set(index)
+        """Create scrollable chat list area using ChatList component."""
+        self.chat_list = ChatList(parent)
+        parent.add(self.chat_list, weight=1)
+        self.chat_list.bind_select(self.on_chat_selected)
 
     def create_chat_view(self, parent):
         """Create chat view area with an empty canvas."""
         self.chat_view = ChatView(parent)
-        parent.add(self.chat_view, weight=4)  # Give 4/6 of the space to chat view
+        parent.add(self.chat_view, weight=4)
 
     def create_settings_area(self, parent):
         """Create settings area."""
         self.settings = Settings(parent, self)
-        parent.add(self.settings, weight=1)  # Give 1/6 of the space to settings
+        parent.add(self.settings, weight=1)
 
     def load_intro_decision(self):
         """Load user's decision about showing the intro window."""
@@ -165,15 +185,11 @@ class View(ThemedTk):
         welcome_message.protocol("WM_DELETE_WINDOW", welcome_message.close)
         welcome_message.grab_set()
         welcome_message.wait_window()
-        self.load_intro_decision()  # Reload the decision after closing the window
+        self.load_intro_decision()
 
     def on_chat_selected(self, event):
         """Handle chat selection event."""
-        selection = event.widget.curselection()
-        if selection:
-            index = selection[0]
-            chat_name = self.chat_listbox.get(index)
-            self.settings.display_chat_name(chat_name)
+        pass
 
     def threadsafe_call(self, callback, *args):
         """Execute a callback in a thread-safe manner."""
@@ -193,11 +209,8 @@ class View(ThemedTk):
         messagebox.showerror(title, message)
 
     def display_chats(self, chats: List[str]):
-        """Display the list of chats in the Listbox only."""
-        self.chat_listbox.delete(0, tk.END)
-        for chat_name in chats:
-            self.chat_listbox.insert(tk.END, chat_name)
-        self.chat_listbox.update_idletasks()
+        """Display the list of chats in the ChatList component."""
+        self.chat_list.display_chats(chats)
 
     def start_export(self):
         """Start the export process."""
@@ -211,7 +224,7 @@ class View(ThemedTk):
         """Reset the application."""
         self.event_generate("<<ResetApplication>>")
         self.settings.clear_exported_files_list()
-        self.chat_view.clear()  # Assuming you have a clear method in ChatView
+        self.chat_view.clear()
         self.selected_exported_file = None
 
     def on_exported_file_selected(self, event):

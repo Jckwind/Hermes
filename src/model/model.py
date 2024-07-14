@@ -63,7 +63,7 @@ class Model:
                 self.contacts_collector.contacts_cache,
                 self.self_contact
             )
-            
+
             print(f"Retrieved {len(messages)} messages for chat identifier: {chat_identifier}")
             return messages
         except Exception as e:
@@ -118,10 +118,10 @@ class Model:
     def get_displayed_chats(self, chat_names: List[str]) -> List[Chat]:
         """
         Get Chat objects for the displayed chat names.
-        
+
         Args:
             chat_names: List of chat names to retrieve.
-        
+
         Returns:
             List of Chat objects for the given chat names.
         """
@@ -130,7 +130,7 @@ class Model:
     def export_chats(self, chats: List[Chat], output_dir: str) -> None:
         """
         Export the given chats to text files in the specified output directory.
-        
+
         Args:
             chats: List of Chat objects to export.
             output_dir: Directory to save the exported chat files.
@@ -139,11 +139,11 @@ class Model:
             messages = self.get_messages(chat.chat_identifier)
             file_name = f"{chat.chat_name}.txt"
             file_path = Path(output_dir) / file_name
-            
+
             with open(file_path, 'w', encoding='utf-8') as f:
                 for message in messages:
                     f.write(f"{message.timestamp} - {message.sender}: {message.text}\n")
-            
+
             print(f"Exported chat {chat.chat_name} to {file_path}")
 
     def get_exported_files(self) -> List[str]:
@@ -152,3 +152,16 @@ class Model:
         if os.path.exists(export_dir):
             return [f for f in os.listdir(export_dir) if f.endswith('.txt')]
         return []
+
+    def search_chats(self, search_term: str) -> List[str]:
+        """
+        Search for chats based on the given search term.
+
+        Args:
+            search_term: The term to search for in chat names.
+
+        Returns:
+            A list of chat names that match the search term.
+        """
+        all_chats = self.get_chats()
+        return [chat.chat_name for chat in all_chats if search_term.lower() in chat.chat_name.lower()]

@@ -24,20 +24,20 @@ class Controller:
         self._view.bind("<<ResetApplication>>", self._on_reset)
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
         self._view.bind("<<LoadExportedFile>>", self._on_load_exported_file)
-        self._view.search_var.trace("w", self._on_search)
+        self._view.toolbar.get_search_var().trace("w", self._on_search)
 
     def _on_search(self, *args) -> None:
         """Handle search bar input event."""
-        search_term = self._view.search_var.get().lower()
-        filtered_chats = self._model.text_collector.search_chats(search_term)
-        
+        search_term = self._view.toolbar.get_search_var().get()
+        filtered_chats = self._model.search_chats(search_term)
+
         # Update only the main chat list
         self._view.display_chats(filtered_chats)
 
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
         self._view.after(0, self._view.chat_view.start_loading_animation)
-        
+
         # Run the export process in a separate thread
         export_thread = threading.Thread(target=self._run_export_process)
         export_thread.start()
@@ -48,7 +48,7 @@ class Controller:
         os.makedirs(output_dir, exist_ok=True)
 
         displayed_chats = self._view.settings.get_displayed_chats()
-        
+
         # Fetch messages for all displayed chats
         for chat_name in displayed_chats:
             chat = self._model.get_chat(chat_name)
@@ -107,7 +107,7 @@ class Controller:
         filename = self._view.selected_exported_file
         if filename:
             file_path = os.path.join(os.getcwd(), "exported_chats", filename)
-            
+
             if os.path.exists(file_path):
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
@@ -126,7 +126,7 @@ class Controller:
                 sanitized_name = self._sanitize_folder_name(chat_name)
                 chat_folder = os.path.join(conversations_folder, sanitized_name)
                 chat_file = os.path.join(chat_folder, f"{sanitized_name}.txt")
-                
+
                 if not os.path.exists(chat_file):
                     all_conversations_ready = False
                     break
@@ -171,5 +171,5 @@ class Controller:
         chat_names = [chat.chat_name for chat in chats]  # Extract chat names
         self._view.display_chats(chat_names)  # This will set the main chat list once
         self._model.load_contacts()
-        
+
         self._view.mainloop()

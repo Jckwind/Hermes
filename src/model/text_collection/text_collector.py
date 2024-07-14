@@ -63,9 +63,12 @@ class TextCollector:
         """Enrich chat data with contact information and return Chat objects."""
         enriched_chats = []
         for chat_id, display_name, chat_identifier in chats:
-            if display_name == '':
+            if display_name == '' or display_name is None:
                 contact = contacts_cache.get(chat_identifier, Contact(phone_number=chat_identifier, name=chat_identifier))
-                display_name = contact.name
+                if contact.name is not None:
+                    display_name = contact.name
+                else:
+                    display_name = chat_identifier
 
             members = self.get_chat_members(chat_id, contacts_cache)
             chat = Chat(
@@ -123,9 +126,9 @@ class TextCollector:
         """Process the results of the imessage-exporter command."""
         output_path = "./dump"
         conversations_folder = "./conversations_selected"
-        
+
         chat = next((c for c in self.chat_cache.values() if c.chat_identifier == chat_identifier), None)
-        
+
         if chat:
             folder_name = self._sanitize_folder_name(chat.chat_name)
             is_group_chat = len(chat.members) > 1
