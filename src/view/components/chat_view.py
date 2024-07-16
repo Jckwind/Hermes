@@ -99,6 +99,7 @@ class ChatView(ttk.Frame):
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.insert(tk.END, content)
         self.apply_highlighting()
+        self.text_widget.see(tk.END)  # Scroll to the end of the content
 
     def apply_highlighting(self):
         self.text_widget.tag_remove("highlighted", "1.0", tk.END)

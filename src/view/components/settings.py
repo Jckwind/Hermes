@@ -119,8 +119,8 @@ class Settings(ttk.Frame):
         if selection:
             index = selection[0]
             filename = self.exported_listbox.get(index)
-            self.view.event_generate("<<ExportedFileSelected>>")
             self.view.selected_exported_file = filename
+            self.view.event_generate("<<ExportedFileSelected>>")
 
     def update_exported_files_list(self, filenames):
         """Update the list of exported files."""

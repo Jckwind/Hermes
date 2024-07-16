@@ -24,6 +24,7 @@ class Controller:
         self._view.bind("<<ResetApplication>>", self._on_reset)
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
         self._view.bind("<<LoadExportedFile>>", self._on_load_exported_file)
+        self._view.bind("<<ExportedFileSelected>>", self._on_load_exported_file)
         self._view.toolbar.get_search_var().trace("w", self._on_search)
 
     def _on_search(self, *args) -> None:
@@ -102,18 +103,17 @@ class Controller:
         # Implement the logic for toggling the dump window
         pass
 
-    def _on_load_exported_file(self, event):
-        """Handle loading an exported file."""
+    def _on_load_exported_file(self, event=None) -> None:
+        """Handle loading of selected exported file."""
         filename = self._view.selected_exported_file
         if filename:
             file_path = os.path.join(os.getcwd(), "exported_chats", filename)
-
             if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                self._view.display_file_content(content)
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    content = file.read()
+                self._view.chat_view.show_file_content(content)
             else:
-                self._view.show_error("File not found", f"The file {filename} could not be found.")
+                print(f"File not found: {file_path}")
 
     def _wait_for_conversations(self, chat_names: List[str], timeout: int = 60) -> None:
         """Wait for conversations to be populated in the conversations_selected folder."""
