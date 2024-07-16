@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 import logging
 from ttkthemes import ThemedTk
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 from model.text_collection.chat import Chat
 from model.text_collection.message import Message
 from view.components.toolbar import Toolbar
@@ -189,7 +189,8 @@ class View(ThemedTk):
 
     def on_chat_selected(self, event):
         """Handle chat selection event."""
-        pass
+        selected_chats = self.chat_list.get_selected_chats()
+        self.settings.update_selected_chats(selected_chats)
 
     def threadsafe_call(self, callback, *args):
         """Execute a callback in a thread-safe manner."""

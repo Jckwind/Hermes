@@ -1,12 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import List
+from collections import OrderedDict
 
 class Settings(ttk.Frame):
     def __init__(self, parent, view, *args, **kwargs):
         super().__init__(parent, style='Settings.TFrame', *args, **kwargs)
         self.view = view
         self.create_widgets()
+        self.chat_cache = OrderedDict()
 
     def create_widgets(self):
         """Create and arrange settings widgets."""
@@ -51,7 +53,7 @@ class Settings(ttk.Frame):
         self.chat_frame = ttk.Frame(self.inner_frame)
         self.chat_frame.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
-        self.tree = ttk.Treeview(self.chat_frame, columns=("ChatName"), show="headings", selectmode="browse")
+        self.tree = ttk.Treeview(self.chat_frame, columns=("ChatName"), show="headings", selectmode="none")
         self.tree.heading("ChatName", text="Selected Chats")
         self.tree.column("ChatName", anchor="w", width=200)
         self.tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
@@ -60,58 +62,30 @@ class Settings(ttk.Frame):
         self.tree.configure(yscrollcommand=self.scrollbar.set)
         self.scrollbar.pack(side=tk.RIGHT, fill="y")
 
-        self._bind_chat_events()
-
-    def create_exported_files_list(self):
-        """Create and configure the exported files list section."""
-        exported_frame = ttk.Frame(self.inner_frame)
-        exported_frame.pack(pady=10, padx=10, fill='x')
-
-        exported_label = ttk.Label(exported_frame, text="Exported Files:", style="SubHeading.TLabel")
-        exported_label.pack(anchor='w', pady=(0, 5))
-
-        self.exported_listbox = tk.Listbox(exported_frame, selectmode=tk.SINGLE, bg='#3d3d3d', fg='white')
-        self.exported_listbox.pack(fill='x', expand=True)
-
-        self.exported_listbox.bind('<<ListboxSelect>>', self.on_exported_file_selected)
-
-    def _bind_chat_events(self):
-        """Bind events for the chat view."""
-        self.tree.bind("<Double-1>", self.on_message_double_click)
-        self.bind_all('<MouseWheel>', self._on_mousewheel)
-        self.bind_all('<Button-4>', self._on_mousewheel)
-        self.bind_all('<Button-5>', self._on_mousewheel)
-        self.bind_all('<Shift-MouseWheel>', self._on_shift_mousewheel)
-
-    def on_message_double_click(self, event):
-        selected_item = self.tree.selection()
-        if selected_item:
-            self.tree.delete(selected_item[0])
-
-    def _on_mousewheel(self, event):
-        """Handle mousewheel and trackpad scrolling."""
-        if event.num == 4 or event.delta > 0:
-            self.tree.yview_scroll(-1, "units")
-        elif event.num == 5 or event.delta < 0:
-            self.tree.yview_scroll(1, "units")
-        else:
-            self.tree.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-    def _on_shift_mousewheel(self, event):
-        """Handle horizontal scrolling with Shift + mousewheel."""
-        if event.delta > 0:
-            self.tree.xview_scroll(-1, "units")
-        elif event.delta < 0:
-            self.tree.xview_scroll(1, "units")
+    def update_selected_chats(self, chat_names: List[str]):
+        """Update the list of selected chats efficiently."""
+        new_chats = OrderedDict((name, True) for name in chat_names)
+        
+        # Remove chats that are no longer selected
+        for chat_name in list(self.chat_cache.keys()):
+            if chat_name not in new_chats:
+                self.tree.delete(chat_name)
+                del self.chat_cache[chat_name]
+        
+        # Add newly selected chats
+        for chat_name in new_chats:
+            if chat_name not in self.chat_cache:
+                self.tree.insert("", "end", iid=chat_name, values=(chat_name,))
+                self.chat_cache[chat_name] = True
 
     def get_displayed_chats(self) -> List[str]:
         """Retrieve the list of chat names currently displayed in the Treeview."""
-        return [self.tree.item(item, "values")[0] for item in self.tree.get_children()]
+        return list(self.chat_cache.keys())
 
     def clear_messages(self):
         """Clear all messages in the chat view."""
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        self.tree.delete(*self.tree.get_children())
+        self.chat_cache.clear()
 
     def _configure_styles(self):
         """Configure custom styles for widgets."""
@@ -139,22 +113,6 @@ class Settings(ttk.Frame):
         """Reset the application."""
         self.view.event_generate("<<ResetApplication>>")
 
-    def display_chat_name(self, chat_name: str):
-        """Display the chat name in the message area."""
-        if not self.tree.exists(chat_name):
-            self.tree.insert("", "end", iid=chat_name, values=(chat_name,))
-
-    def remove_chat_name(self, chat_name: str):
-        """Remove the chat name from the message area."""
-        if self.tree.exists(chat_name):
-            self.tree.delete(chat_name)
-
-    def display_chats(self, chat_names: List[str]):
-        """Display the list of chat names in the Treeview."""
-        self.clear_messages()
-        for chat_name in chat_names:
-            self.display_chat_name(chat_name)
-
     def on_exported_file_selected(self, event):
         """Handle exported file selection event."""
         selection = self.exported_listbox.curselection()
@@ -173,3 +131,16 @@ class Settings(ttk.Frame):
     def clear_exported_files_list(self):
         """Clear the exported files list."""
         self.exported_listbox.delete(0, tk.END)
+
+    def create_exported_files_list(self):
+        """Create and configure the exported files list section."""
+        exported_frame = ttk.Frame(self.inner_frame)
+        exported_frame.pack(pady=10, padx=10, fill='x')
+
+        exported_label = ttk.Label(exported_frame, text="Exported Files:", style="SubHeading.TLabel")
+        exported_label.pack(anchor='w', pady=(0, 5))
+
+        self.exported_listbox = tk.Listbox(exported_frame, selectmode=tk.SINGLE, bg='#3d3d3d', fg='white')
+        self.exported_listbox.pack(fill='x', expand=True)
+
+        self.exported_listbox.bind('<<ListboxSelect>>', self.on_exported_file_selected)
