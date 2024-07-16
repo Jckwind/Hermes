@@ -13,6 +13,8 @@ class ChatView(ttk.Frame):
         self.angle = 0
         self.angle_increment = 15  # Increased from 10 to 15
         self.animation_delay = 10  # Decreased from 50 to 30 milliseconds
+        self.highlighted_names = set()
+        self.content = ""
 
     def _create_widgets(self):
         """Create and configure the widgets for the chat view."""
@@ -22,6 +24,9 @@ class ChatView(ttk.Frame):
         self.text_widget = tk.Text(self, wrap=tk.WORD, bg='#2d2d2d', fg='white', font=('Helvetica', 12))
         self.text_widget.pack(fill=tk.BOTH, expand=True)
         self.text_widget.pack_forget()  # Hide it initially
+
+        # Configure text tags for highlighting
+        self.text_widget.tag_configure("highlighted", background="#4CAF50", foreground="white")
 
         # Add a custom scrollbar
         self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.text_widget.yview)
@@ -33,6 +38,7 @@ class ChatView(ttk.Frame):
         self.text_widget.delete(1.0, tk.END)
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.text_widget.pack_forget()
+        self.highlighted_names.clear()
 
     def start_loading_animation(self):
         """Start the loading animation."""
@@ -85,21 +91,46 @@ class ChatView(ttk.Frame):
 
     def show_file_content(self, content):
         """Display the content of a file in the text widget."""
+        self.content = content
         self.clear()
         self.canvas.pack_forget()
         self.text_widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.text_widget.delete(1.0, tk.END)
         self.text_widget.insert(tk.END, content)
+        self.apply_highlighting()
 
-        # Add syntax highlighting (you'll need to implement this based on your content)
-        self.apply_syntax_highlighting()
+    def apply_highlighting(self):
+        self.text_widget.tag_remove("highlighted", "1.0", tk.END)
+        for name in self.highlighted_names:
+            self.highlight_name(name)
 
-    def apply_syntax_highlighting(self):
-        # Implement syntax highlighting logic here
-        pass
+    def highlight_name(self, name):
+        start = "1.0"
+        while True:
+            start = self.text_widget.search(name, start, stopindex=tk.END, nocase=True)
+            if not start:
+                break
+            end = f"{start}+{len(name)}c"
+            self.text_widget.tag_add("highlighted", start, end)
+            start = end
+
+    def update_highlighted_names(self, selected_names):
+        self.highlighted_names = set(selected_names)
+        if self.content:
+            self.apply_highlighting()
+
+    def reset_highlights(self):
+        """Reset only the highlighted names without clearing the content."""
+        self.highlighted_names.clear()
+        self.text_widget.tag_remove("highlighted", "1.0", tk.END)
 
     def hide_file_content(self):
         """Hide the text widget and show the canvas."""
         self.text_widget.pack_forget()
         self.canvas.pack(fill=tk.BOTH, expand=True)
+
+    def reset(self):
+        """Reset the chat view."""
+        self.clear()
+        self.hide_file_content()
