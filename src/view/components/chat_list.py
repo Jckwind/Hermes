@@ -38,19 +38,32 @@ class ChatList(ttk.Frame):
         selection = self.chat_listbox.curselection()
         newly_selected = set(self.displayed_chats[i] for i in selection)
         
-        # Update selected_chats based on the current selection
-        self.selected_chats.update(newly_selected)
+        # Toggle selection status
+        for chat in self.displayed_chats:
+            if chat in newly_selected and chat not in self.selected_chats:
+                self.selected_chats.add(chat)
+            elif chat not in newly_selected and chat in self.selected_chats:
+                self.selected_chats.remove(chat)
+        
         self.selected_chats.intersection_update(set(self.all_chats))
         
+        # Update the listbox selection to reflect the current state
+        self.update_listbox_selection()
+        
         self.event_generate("<<SelectionComplete>>")
+
+    def update_listbox_selection(self):
+        self.chat_listbox.selection_clear(0, tk.END)
+        for i, chat in enumerate(self.displayed_chats):
+            if chat in self.selected_chats:
+                self.chat_listbox.selection_set(i)
 
     def display_chats(self, chats: List[str]):
         self.displayed_chats = chats
         self.chat_listbox.delete(0, tk.END)
         for chat in chats:
             self.chat_listbox.insert(tk.END, chat)
-            if chat in self.selected_chats:
-                self.chat_listbox.selection_set(tk.END)
+        self.update_listbox_selection()
 
     def set_all_chats(self, chats: List[str]):
         self.all_chats = chats
