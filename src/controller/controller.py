@@ -25,6 +25,7 @@ class Controller:
         self._view.bind("<<ToggleDumpWindow>>", self._on_toggle_dump_window)
         self._view.bind("<<LoadExportedFile>>", self._on_load_exported_file)
         self._view.bind("<<ExportedFileSelected>>", self._on_load_exported_file)
+        self._view.bind("<<SaveExport>>", self._on_save_export)
         self._view.toolbar.get_search_var().trace("w", self._on_search)
 
     def _on_search(self, *args) -> None:
@@ -38,6 +39,9 @@ class Controller:
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
         self._view.after(0, self._view.chat_view.start_loading_animation)
+
+        # Show the folder name input in settings
+        self._view.settings.show_folder_name_input()
 
         # Run the export process in a separate thread
         export_thread = threading.Thread(target=self._run_export_process)
@@ -62,6 +66,17 @@ class Controller:
         # Wait for conversations to be populated
         self._wait_for_conversations(displayed_chats)
 
+        # After fetching messages, show the folder name input
+        self._view.after(0, self._view.settings.show_folder_name_input)
+
+    def _on_save_export(self, event=None) -> None:
+        """Handle saving the exported chats."""
+        folder_name = self._view.settings.folder_name_var.get()
+        output_dir = os.path.join(os.getcwd(), "exported_chats", folder_name)
+        os.makedirs(output_dir, exist_ok=True)
+
+        displayed_chats = self._view.settings.get_displayed_chats()
+
         # Export the chats
         for chat_name in displayed_chats:
             chat = self._model.get_chat(chat_name)
@@ -76,6 +91,9 @@ class Controller:
         # After export is complete, update the exported files list
         exported_files = [f for f in os.listdir(output_dir) if f.endswith('.txt')]
         self._view.after(0, self._view.update_exported_files_list, exported_files)
+
+        # Hide the folder name input
+        self._view.after(0, self._view.settings.hide_folder_name_input)
 
     def _on_start_google_drive_upload(self, event=None) -> None:
         """Handle Google Drive upload process."""

@@ -34,19 +34,38 @@ class Settings(ttk.Frame):
 
     def create_folder_name_input(self):
         """Create and configure the folder name input section."""
-        folder_frame = ttk.Frame(self.inner_frame)
-        folder_frame.pack(pady=10, padx=10, fill='x')
+        self.folder_frame = ttk.Frame(self.inner_frame)
+        self.folder_frame.pack(pady=10, padx=10, fill='x')
 
-        folder_label = ttk.Label(folder_frame, text="Name your folder here:", style="SubHeading.TLabel")
+        folder_label = ttk.Label(self.folder_frame, text="Name your folder here:", style="SubHeading.TLabel")
         folder_label.pack(anchor='w', pady=(0, 5))
 
-        self.folder_name_var = tk.StringVar(value="exported_chats")  # Set default value
-        folder_entry = ttk.Entry(folder_frame, textvariable=self.folder_name_var, style='Settings.TEntry')
-        folder_entry.pack(fill='x')
+        self.folder_name_var = tk.StringVar(value="")
+        self.folder_entry = ttk.Entry(self.folder_frame, textvariable=self.folder_name_var, style='Settings.TEntry')
+        self.folder_entry.pack(fill='x')
 
-        # Add the submit button
-        submit_button = ttk.Button(folder_frame, text="Submit", style="Settings.TButton", command=self.on_submit)
-        submit_button.pack(pady=(10, 0), anchor='center')
+        self.save_button = ttk.Button(self.folder_frame, text="Save", style="Settings.TButton", command=self.on_save)
+        self.save_button.pack(pady=(10, 0), anchor='center')
+
+        # Initially hide the folder name input
+        self.folder_frame.pack_forget()
+
+    def show_folder_name_input(self):
+        """Show the folder name input section."""
+        self.folder_frame.pack(pady=10, padx=10, fill='x')
+
+    def hide_folder_name_input(self):
+        """Hide the folder name input section."""
+        self.folder_frame.pack_forget()
+
+    def on_save(self):
+        """Handle save button click."""
+        folder_name = self.folder_name_var.get()
+        if folder_name:
+            self.view.event_generate("<<SaveExport>>")
+        else:
+            # Show an error message if the folder name is empty
+            self.view.show_error("Invalid Folder Name", "Please enter a valid folder name.")
 
     def create_chat_view(self):
         """Create and configure the chat view widgets."""
