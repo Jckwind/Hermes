@@ -1,13 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
-from collections import OrderedDict
+from typing import List, Set
 
 class ChatList(ttk.Frame):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, style='ChatList.TFrame', *args, **kwargs)
         self.create_widgets()
-        self.selected_chats = OrderedDict()
-        self.all_chats = []
+        self.selected_chats: Set[str] = set()
+        self.all_chats: List[str] = []
+        self.displayed_chats: List[str] = []
 
     def create_widgets(self):
         self.chat_listbox = tk.Listbox(
@@ -25,47 +26,38 @@ class ChatList(ttk.Frame):
             selectforeground='white',
             font=('Helvetica', 14)
         )
-
         self.chat_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         chat_scrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.chat_listbox.yview)
         chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         self.chat_listbox.config(yscrollcommand=chat_scrollbar.set)
-
-        self.chat_listbox.bind('<ButtonRelease-1>', self.on_select)
+        self.chat_listbox.bind('<<ListboxSelect>>', self.on_select)
 
     def on_select(self, event):
         selection = self.chat_listbox.curselection()
-        for i in range(self.chat_listbox.size()):
-            chat_name = self.chat_listbox.get(i)
-            if i in selection:
-                self.selected_chats[chat_name] = True
-            else:
-                self.selected_chats.pop(chat_name, None)
+        newly_selected = set(self.displayed_chats[i] for i in selection)
+        
+        # Update selected_chats based on the current selection
+        self.selected_chats.update(newly_selected)
+        self.selected_chats.intersection_update(set(self.all_chats))
+        
         self.event_generate("<<SelectionComplete>>")
 
-    def bind_select(self, callback):
-        self.bind('<<SelectionComplete>>', callback)
-
-    def display_chats(self, chats):
+    def display_chats(self, chats: List[str]):
+        self.displayed_chats = chats
         self.chat_listbox.delete(0, tk.END)
-        for chat_name in chats:
-            self.chat_listbox.insert(tk.END, chat_name)
-        
-        # Restore selection for chats that are still in the list
-        for i, chat_name in enumerate(chats):
-            if chat_name in self.selected_chats:
-                self.chat_listbox.selection_set(i)
+        for chat in chats:
+            self.chat_listbox.insert(tk.END, chat)
+            if chat in self.selected_chats:
+                self.chat_listbox.selection_set(tk.END)
 
-    def set_all_chats(self, chats):
+    def set_all_chats(self, chats: List[str]):
         self.all_chats = chats
+        self.display_chats(chats)
 
-    def get_all_chats(self):
-        return self.all_chats
-
-    def get_selected_chats(self):
-        return list(self.selected_chats.keys())
+    def get_selected_chats(self) -> List[str]:
+        return list(self.selected_chats)
 
     def clear_selection(self):
         self.chat_listbox.selection_clear(0, tk.END)

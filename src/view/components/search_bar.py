@@ -8,6 +8,8 @@ class SearchBar(ttk.Frame):
 
     def create_widgets(self):
         self.search_var = tk.StringVar()
+        self.search_var.trace("w", self.on_search_change)
+
         self.search_entry = ttk.Entry(
             self,
             textvariable=self.search_var,
@@ -33,6 +35,10 @@ class SearchBar(ttk.Frame):
         # Set initial state
         self.on_search_focus_out(None)
 
+    def on_search_change(self, *args):
+        if self.search_var.get() != "Search...":
+            self.event_generate("<<SearchChanged>>")
+
     def on_search_focus_in(self, event):
         if self.search_var.get() == "Search...":
             self.search_var.set("")
@@ -46,6 +52,7 @@ class SearchBar(ttk.Frame):
     def clear_search(self):
         self.search_var.set("")
         self.search_entry.focus_set()
+        self.event_generate("<<SearchChanged>>")
 
     def set_width(self, width):
         self.search_entry.config(width=width)

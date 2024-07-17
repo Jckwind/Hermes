@@ -18,6 +18,7 @@ class Controller:
         self._view = view
         self._setup_event_handlers()
         self.export_dir = self._get_export_directory()
+        self.all_chats = []
 
     def _get_export_directory(self) -> Path:
         """Get the path to the export directory in the user's Documents folder."""
@@ -35,18 +36,23 @@ class Controller:
         self._view.bind("<<LoadExportedFile>>", self._on_load_exported_file)
         self._view.bind("<<ExportedFileSelected>>", self._on_load_exported_file)
         self._view.bind("<<SaveExport>>", self._on_save_export)
-        self._view.toolbar.get_search_var().trace("w", self._on_search)
+        self._view.bind("<<SearchChanged>>", self._on_search)
+        self._view.bind("<<SelectionComplete>>", self._on_selection_complete)
 
-    def _on_search(self, *args) -> None:
+    def _on_search(self, event):
         """Handle search bar input event."""
-        search_term = self._view.toolbar.get_search_var().get()
-        all_chats = self._view.chat_list.get_all_chats()
-        
+        search_term = self._view.toolbar.get_search_var().get().lower()
         if search_term:
-            filtered_chats = [chat for chat in all_chats if search_term.lower() in chat.lower()]
-            self._view.display_chats(filtered_chats)
+            filtered_chats = [chat for chat in self.all_chats if search_term in chat.lower()]
         else:
-            self._view.display_chats(all_chats)
+            filtered_chats = self.all_chats.copy()
+        
+        self._view.chat_list.display_chats(filtered_chats)
+
+    def _on_selection_complete(self, event):
+        """Handle selection complete event."""
+        selected_chats = self._view.chat_list.get_selected_chats()
+        self._view.settings.update_selected_chats(selected_chats)
 
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
@@ -209,9 +215,9 @@ class Controller:
     def run(self) -> None:
         """Load chats and start the main event loop."""
         chats = self._model.get_chats()
-        chat_names = [chat.chat_name for chat in chats]  # Extract chat names
-        self._view.set_all_chats(chat_names)  # Set the full list of chats
-        self._view.display_chats(chat_names)  # Display all chats initially
+        self.all_chats = [chat.chat_name for chat in chats]  # Store all chat names
+        self._view.chat_list.set_all_chats(self.all_chats)
+        self._view.chat_list.display_chats(self.all_chats)  # Display all chats initially
         self._model.load_contacts()
 
         self._view.mainloop()

@@ -144,25 +144,15 @@ class View(ThemedTk):
         paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
         paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
 
-        self.create_chat_list(paned_window)
-        self.create_chat_view(paned_window)
-        self.create_settings_area(paned_window)
+        self.chat_list = ChatList(paned_window)
+        paned_window.add(self.chat_list, weight=1)
+        self.chat_list.bind("<<SelectionComplete>>", self.on_chat_selected)
 
-    def create_chat_list(self, parent):
-        """Create scrollable chat list area using ChatList component."""
-        self.chat_list = ChatList(parent)
-        parent.add(self.chat_list, weight=1)
-        self.chat_list.bind_select(self.on_chat_selected)
+        self.chat_view = ChatView(paned_window)
+        paned_window.add(self.chat_view, weight=4)
 
-    def create_chat_view(self, parent):
-        """Create chat view area with an empty canvas."""
-        self.chat_view = ChatView(parent)
-        parent.add(self.chat_view, weight=4)
-
-    def create_settings_area(self, parent):
-        """Create settings area."""
-        self.settings = Settings(parent, self)
-        parent.add(self.settings, weight=1)
+        self.settings = Settings(paned_window, self)
+        paned_window.add(self.settings, weight=1)
 
     def load_intro_decision(self):
         """Load user's decision about showing the intro window."""
