@@ -3,6 +3,7 @@ import time
 import subprocess
 import shutil
 from typing import List, Dict
+from pathlib import Path
 from model.model import Model
 from view.view import View
 from model.text_collection.chat import Chat
@@ -16,6 +17,14 @@ class Controller:
         self._model = model
         self._view = view
         self._setup_event_handlers()
+        self.export_dir = self._get_export_directory()
+
+    def _get_export_directory(self) -> Path:
+        """Get the path to the export directory in the user's Documents folder."""
+        documents_path = Path.home() / "Documents"
+        export_dir = documents_path / "exported_chats"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        return export_dir
 
     def _setup_event_handlers(self) -> None:
         """Set up event handlers for the view."""
@@ -51,10 +60,6 @@ class Controller:
         export_thread.start()
 
     def _run_export_process(self):
-        folder_name = "exported_chats"
-        output_dir = os.path.join(os.getcwd(), folder_name)
-        os.makedirs(output_dir, exist_ok=True)
-
         displayed_chats = self._view.settings.get_displayed_chats()
 
         # Fetch messages for all displayed chats
@@ -75,8 +80,8 @@ class Controller:
     def _on_save_export(self, event=None) -> None:
         """Handle saving the exported chats."""
         folder_name = self._view.settings.folder_name_var.get()
-        output_dir = os.path.join(os.getcwd(), "exported_chats", folder_name)
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir = self.export_dir / folder_name
+        output_dir.mkdir(parents=True, exist_ok=True)
 
         displayed_chats = self._view.settings.get_displayed_chats()
 
@@ -89,11 +94,10 @@ class Controller:
         # Use after to schedule UI updates on the main thread
         self._view.after(0, self._view.chat_view.stop_loading_animation)
         self._view.after(0, lambda: self._view.chat_view.show_completion_message("Export Complete!"))
-        self._view.after(0, lambda: self._view.notify_export_complete(output_dir))
+        self._view.after(0, lambda: self._view.notify_export_complete(str(output_dir)))
 
         # After export is complete, update the exported files list
-        exported_files = [f for f in os.listdir(output_dir) if f.endswith('.txt')]
-        self._view.after(0, self._view.update_exported_files_list, exported_files)
+        self._refresh_exported_files_list()
 
         # Hide the folder name input
         self._view.after(0, self._view.settings.hide_folder_name_input)
@@ -115,9 +119,15 @@ class Controller:
         # Clear only the selected chats in the settings area
         self._view.settings.clear_messages()
 
-        # Delete the specified folders
+        # Delete only the conversations_selected folder
         self._delete_folder("./conversations_selected")
-        self._delete_folder("./exported_chats")
+
+        # Reset the chat list and chat view
+        self._view.chat_list.clear_selection()
+        self._view.chat_view.clear()
+
+        # Optionally, you might want to refresh the list of exported files
+        self._refresh_exported_files_list()
 
     def _on_toggle_dump_window(self, event: object) -> None:
         """Handle toggle dump window event."""
@@ -126,10 +136,11 @@ class Controller:
 
     def _on_load_exported_file(self, event=None) -> None:
         """Handle loading of selected exported file."""
-        filename = self._view.selected_exported_file
-        if filename:
-            file_path = os.path.join(os.getcwd(), "exported_chats", filename)
-            if os.path.exists(file_path):
+        selected_file = self._view.selected_exported_file
+        if selected_file:
+            subdir_name, filename = selected_file
+            file_path = self.export_dir / subdir_name / filename
+            if file_path.exists():
                 with open(file_path, 'r', encoding='utf-8') as file:
                     content = file.read()
                 self._view.chat_view.show_file_content(content)
@@ -185,6 +196,15 @@ class Controller:
         """Delete a folder and its contents."""
         if os.path.exists(folder_path):
             shutil.rmtree(folder_path)
+
+    def _refresh_exported_files_list(self):
+        """Refresh the list of exported files in the settings area."""
+        exported_files = []
+        for subdir in self.export_dir.iterdir():
+            if subdir.is_dir():
+                for file in subdir.glob('*.txt'):
+                    exported_files.append((subdir.name, file.name))
+        self._view.update_exported_files_list(exported_files)
 
     def run(self) -> None:
         """Load chats and start the main event loop."""

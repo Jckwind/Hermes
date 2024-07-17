@@ -240,7 +240,7 @@ class View(ThemedTk):
         if self.selected_exported_file:
             self.event_generate("<<LoadExportedFile>>")
 
-    def update_exported_files_list(self, filenames):
+    def update_exported_files_list(self, filenames: List[tuple[str, str]]):
         """Update the list of exported files in the settings area."""
         self.settings.update_exported_files_list(filenames)
 

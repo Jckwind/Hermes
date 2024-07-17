@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from typing import List
+from typing import List, Tuple
 from collections import OrderedDict
 
 class Settings(ttk.Frame):
@@ -137,15 +137,16 @@ class Settings(ttk.Frame):
         selection = self.exported_listbox.curselection()
         if selection:
             index = selection[0]
-            filename = self.exported_listbox.get(index)
-            self.view.selected_exported_file = filename
+            full_path = self.exported_listbox.get(index)
+            subdir, filename = full_path.split(" / ")
+            self.view.selected_exported_file = (subdir, filename)
             self.view.event_generate("<<ExportedFileSelected>>")
 
-    def update_exported_files_list(self, filenames):
+    def update_exported_files_list(self, filenames: List[Tuple[str, str]]):
         """Update the list of exported files."""
         self.exported_listbox.delete(0, tk.END)
-        for filename in filenames:
-            self.exported_listbox.insert(tk.END, filename)
+        for subdir, filename in filenames:
+            self.exported_listbox.insert(tk.END, f"{subdir} / {filename}")
 
     def clear_exported_files_list(self):
         """Clear the exported files list."""
