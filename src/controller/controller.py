@@ -31,10 +31,13 @@ class Controller:
     def _on_search(self, *args) -> None:
         """Handle search bar input event."""
         search_term = self._view.toolbar.get_search_var().get()
-        filtered_chats = self._model.search_chats(search_term)
-
-        # Update only the main chat list
-        self._view.display_chats(filtered_chats)
+        all_chats = self._view.chat_list.get_all_chats()
+        
+        if search_term:
+            filtered_chats = [chat for chat in all_chats if search_term.lower() in chat.lower()]
+            self._view.display_chats(filtered_chats)
+        else:
+            self._view.display_chats(all_chats)
 
     def _on_export_chat(self, event=None) -> None:
         """Handle export chats process."""
@@ -187,7 +190,8 @@ class Controller:
         """Load chats and start the main event loop."""
         chats = self._model.get_chats()
         chat_names = [chat.chat_name for chat in chats]  # Extract chat names
-        self._view.display_chats(chat_names)  # This will set the main chat list once
+        self._view.set_all_chats(chat_names)  # Set the full list of chats
+        self._view.display_chats(chat_names)  # Display all chats initially
         self._model.load_contacts()
 
         self._view.mainloop()

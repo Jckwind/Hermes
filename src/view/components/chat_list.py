@@ -7,6 +7,7 @@ class ChatList(ttk.Frame):
         super().__init__(parent, style='ChatList.TFrame', *args, **kwargs)
         self.create_widgets()
         self.selected_chats = OrderedDict()
+        self.all_chats = []
 
     def create_widgets(self):
         self.chat_listbox = tk.Listbox(
@@ -36,10 +37,12 @@ class ChatList(ttk.Frame):
 
     def on_select(self, event):
         selection = self.chat_listbox.curselection()
-        self.selected_chats.clear()
-        for index in selection:
-            chat_name = self.chat_listbox.get(index)
-            self.selected_chats[chat_name] = True
+        for i in range(self.chat_listbox.size()):
+            chat_name = self.chat_listbox.get(i)
+            if i in selection:
+                self.selected_chats[chat_name] = True
+            else:
+                self.selected_chats.pop(chat_name, None)
         self.event_generate("<<SelectionComplete>>")
 
     def bind_select(self, callback):
@@ -49,7 +52,17 @@ class ChatList(ttk.Frame):
         self.chat_listbox.delete(0, tk.END)
         for chat_name in chats:
             self.chat_listbox.insert(tk.END, chat_name)
-        self.selected_chats.clear()
+        
+        # Restore selection for chats that are still in the list
+        for i, chat_name in enumerate(chats):
+            if chat_name in self.selected_chats:
+                self.chat_listbox.selection_set(i)
+
+    def set_all_chats(self, chats):
+        self.all_chats = chats
+
+    def get_all_chats(self):
+        return self.all_chats
 
     def get_selected_chats(self):
         return list(self.selected_chats.keys())

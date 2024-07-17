@@ -212,6 +212,13 @@ class View(ThemedTk):
     def display_chats(self, chats: List[str]):
         """Display the list of chats in the ChatList component."""
         self.chat_list.display_chats(chats)
+        # Update the settings area with the currently selected chats
+        self.settings.update_selected_chats(self.chat_list.get_selected_chats())
+
+    def set_all_chats(self, chats: List[str]):
+        """Set the full list of chats in the ChatList component."""
+        self.chat_list.set_all_chats(chats)
+        self.display_chats(chats)  # Display all chats initially
 
     def start_export(self):
         """Start the export process."""
