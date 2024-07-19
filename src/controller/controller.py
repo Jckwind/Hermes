@@ -8,6 +8,7 @@ from model.model import Model
 from view.view import View
 from model.text_collection.chat import Chat
 import threading
+import logging
 
 class Controller:
     """Controller class for managing interactions between Model and View."""
@@ -90,17 +91,25 @@ class Controller:
         output_dir = self.export_dir / folder_name
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        displayed_chats = self._view.settings.get_displayed_chats()
+        # Get the selected chats directly from the chat list
+        selected_chats = self._view.chat_list.get_selected_chats()
+        logging.info(f"Selected chats: {selected_chats}")
 
         self.current_export_files = []  # Reset the list of current export files
 
-        # Export the chats
-        for chat_name in displayed_chats:
+        # Export all selected chats
+        for chat_name in selected_chats:
             chat = self._model.get_chat(chat_name)
             if chat:
+                logging.info(f"Exporting chat: {chat_name}")
                 exported_file = self._export_chat(chat, output_dir)
                 if exported_file:
                     self.current_export_files.append((folder_name, exported_file.name))
+                    logging.info(f"Exported file: {exported_file}")
+            else:
+                logging.warning(f"Chat not found in model: {chat_name}")
+
+        logging.info(f"Total exported files: {len(self.current_export_files)}")
 
         # Use after to schedule UI updates on the main thread
         self._view.after(0, self._view.chat_view.stop_loading_animation)
@@ -196,8 +205,14 @@ class Controller:
         self._view.chat_list.clear_selection()
         self._view.chat_view.clear()
 
-        # Optionally, you might want to refresh the list of exported files
-        self._refresh_exported_files_list()
+        # Clear the exported files list
+        self._view.settings.clear_exported_files_list()
+
+        # Show the folder name input
+        self._view.settings.show_folder_name_input()
+
+        # Clear the current export files
+        self.current_export_files = []
 
     def _on_toggle_dump_window(self, event: object) -> None:
         """Handle toggle dump window event."""
@@ -253,8 +268,11 @@ class Controller:
 
         if source_file.exists():
             shutil.copy(source_file, chat_filepath)
+            logging.info(f"Copied file from {source_file} to {chat_filepath}")
             return chat_filepath
-        return None
+        else:
+            logging.warning(f"Source file not found: {source_file}")
+            return None
 
     def _delete_folder(self, folder_path: str) -> None:
         """Delete a folder and its contents."""
@@ -267,8 +285,10 @@ class Controller:
 
     def run(self) -> None:
         """Load chats and start the main event loop."""
+        logging.basicConfig(level=logging.INFO)
         chats = self._model.get_chats()
         self.all_chats = [chat.chat_name for chat in chats]  # Store all chat names
+        logging.info(f"All chats: {self.all_chats}")
         self._view.chat_list.set_all_chats(self.all_chats)
         self._view.chat_list.display_chats(self.all_chats)  # Display all chats initially
         self._model.load_contacts()
