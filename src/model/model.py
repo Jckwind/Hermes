@@ -140,11 +140,15 @@ class Model:
             file_name = f"{chat.chat_name}.txt"
             file_path = Path(output_dir) / file_name
 
+            print(f"Exporting chat {chat.chat_name} to {file_path}")
+            print(f"Number of messages: {len(messages)}")
+
             with open(file_path, 'w', encoding='utf-8') as f:
                 for message in messages:
                     f.write(f"{message.timestamp} - {message.sender}: {message.text}\n")
 
             print(f"Exported chat {chat.chat_name} to {file_path}")
+            print(f"File size: {file_path.stat().st_size} bytes")
 
     def get_exported_files(self) -> List[str]:
         """Get a list of exported chat files."""

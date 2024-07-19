@@ -110,15 +110,59 @@ class Controller:
 
     def _on_start_google_drive_upload(self, event=None) -> None:
         """Handle Google Drive upload process."""
-        folder_name = "exported_chats"
-        output_dir = os.path.join(os.getcwd(), folder_name)
+        self._view.after(0, self._view.chat_view.start_loading_animation)
 
-        if not os.path.exists(output_dir):
-            self._view.show_error("Export folder not found", "Please export chats before uploading to Google Drive.")
-            return
+        # Run the upload process in a separate thread
+        upload_thread = threading.Thread(target=self._run_upload_process)
+        upload_thread.start()
 
-        self._upload_to_google_drive(output_dir)
-        self._view.notify_upload_complete()
+    def _run_upload_process(self):
+        """Run the Google Drive upload process."""
+        # Get the currently displayed chats
+        displayed_chat_names = self._view.settings.get_displayed_chats()
+        displayed_chats = self._model.get_displayed_chats(displayed_chat_names)
+
+        # Create a temporary directory for the files to be uploaded
+        temp_dir = Path(self.export_dir) / "temp_upload"
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # Export the displayed chats to the temporary directory
+            self._model.export_chats(displayed_chats, str(temp_dir))
+
+            # Upload the exported files to Google Drive
+            success = self._upload_to_google_drive(temp_dir)
+
+            # Use after to schedule UI updates on the main thread
+            self._view.after(0, self._view.chat_view.stop_loading_animation)
+            if success:
+                self._view.after(0, lambda: self._view.chat_view.show_completion_message("Upload Complete!"))
+                self._view.after(0, self._view.notify_upload_complete)
+            else:
+                self._view.after(0, lambda: self._view.chat_view.show_completion_message("Upload Failed. Check console for details."))
+        finally:
+            # Clean up the temporary directory
+            shutil.rmtree(temp_dir)
+
+    def _upload_to_google_drive(self, directory: Path) -> bool:
+        """Upload exported chats to Google Drive."""
+        google_drive_upload_script = Path(__file__).parent.parent / "model" / "google_drive_upload" / "google_drive_upload.py"
+        
+        all_uploads_successful = True
+        for file_path in directory.glob('*.txt'):
+            print(f"Uploading file: {file_path}")
+            result = subprocess.run(["python", str(google_drive_upload_script), str(file_path)], capture_output=True, text=True)
+            
+            if result.returncode != 0:
+                print(f"Error uploading {file_path} to Google Drive:")
+                print(f"STDOUT: {result.stdout}")
+                print(f"STDERR: {result.stderr}")
+                all_uploads_successful = False
+            else:
+                print(f"Successfully uploaded {file_path}")
+                print(f"STDOUT: {result.stdout}")
+
+        return all_uploads_successful
 
     def _on_reset(self, event=None) -> None:
         """Handle reset event."""
@@ -189,14 +233,6 @@ class Controller:
 
         if os.path.exists(source_file):
             shutil.copy(source_file, chat_filepath)
-
-    def _upload_to_google_drive(self, output_dir: str) -> None:
-        """Upload exported chats to Google Drive."""
-        google_drive_upload_script = os.path.join(os.path.dirname(__file__), '../model/google_drive_upload/google_drive_upload.py')
-        for filename in os.listdir(output_dir):
-            if filename.endswith('.txt'):
-                file_path = os.path.join(output_dir, filename)
-                subprocess.run(["python", google_drive_upload_script, file_path])
 
     def _delete_folder(self, folder_path: str) -> None:
         """Delete a folder and its contents."""
