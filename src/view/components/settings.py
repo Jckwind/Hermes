@@ -164,3 +164,14 @@ class Settings(ttk.Frame):
         self.exported_listbox.pack(fill='x', expand=True)
 
         self.exported_listbox.bind('<<ListboxSelect>>', self.on_exported_file_selected)
+
+    def select_exported_file(self, file_info):
+        """Select the specified file in the exported files list."""
+        subdir, filename = file_info
+        file_string = f"{subdir} / {filename}"
+        for i in range(self.exported_listbox.size()):
+            if self.exported_listbox.get(i) == file_string:
+                self.exported_listbox.selection_clear(0, tk.END)
+                self.exported_listbox.selection_set(i)
+                self.exported_listbox.see(i)
+                break

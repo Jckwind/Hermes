@@ -19,6 +19,7 @@ class Controller:
         self._setup_event_handlers()
         self.export_dir = self._get_export_directory()
         self.all_chats = []
+        self.current_export_files = []
 
     def _get_export_directory(self) -> Path:
         """Get the path to the export directory in the user's Documents folder."""
@@ -91,15 +92,18 @@ class Controller:
 
         displayed_chats = self._view.settings.get_displayed_chats()
 
+        self.current_export_files = []  # Reset the list of current export files
+
         # Export the chats
         for chat_name in displayed_chats:
             chat = self._model.get_chat(chat_name)
             if chat:
-                self._export_chat(chat, output_dir)
+                exported_file = self._export_chat(chat, output_dir)
+                if exported_file:
+                    self.current_export_files.append((folder_name, exported_file.name))
 
         # Use after to schedule UI updates on the main thread
         self._view.after(0, self._view.chat_view.stop_loading_animation)
-        self._view.after(0, lambda: self._view.chat_view.show_completion_message("Export Complete!"))
         self._view.after(0, lambda: self._view.notify_export_complete(str(output_dir)))
 
         # After export is complete, update the exported files list
@@ -107,6 +111,22 @@ class Controller:
 
         # Hide the folder name input
         self._view.after(0, self._view.settings.hide_folder_name_input)
+
+        # Display the first exported file
+        if self.current_export_files:
+            first_file = self.current_export_files[0]
+            self._view.after(0, lambda: self._display_exported_file(first_file))
+
+    def _display_exported_file(self, file_info):
+        """Display the content of an exported file."""
+        subdir, filename = file_info
+        file_path = self.export_dir / subdir / filename
+        if file_path.exists():
+            with open(file_path, 'r', encoding='utf-8') as file:
+                content = file.read()
+            self._view.chat_view.show_file_content(content)
+            self._view.selected_exported_file = file_info
+            self._view.settings.select_exported_file(file_info)
 
     def _on_start_google_drive_upload(self, event=None) -> None:
         """Handle Google Drive upload process."""
@@ -222,17 +242,19 @@ class Controller:
         """Sanitize the folder name to match the one created by the text collector."""
         return name.replace(', ', '_').replace(' ', '_').rstrip('...')
 
-    def _export_chat(self, chat: Chat, output_dir: str) -> None:
+    def _export_chat(self, chat: Chat, output_dir: Path) -> Path:
         """Export a single chat to a text file."""
         chat_filename = f"{chat.chat_name}.txt"
-        chat_filepath = os.path.join(output_dir, chat_filename)
+        chat_filepath = output_dir / chat_filename
 
         # Use the sanitized name to find the correct file in conversations_selected
         sanitized_name = self._sanitize_folder_name(chat.chat_name)
-        source_file = os.path.join("./conversations_selected", sanitized_name, f"{sanitized_name}.txt")
+        source_file = Path("./conversations_selected") / sanitized_name / f"{sanitized_name}.txt"
 
-        if os.path.exists(source_file):
+        if source_file.exists():
             shutil.copy(source_file, chat_filepath)
+            return chat_filepath
+        return None
 
     def _delete_folder(self, folder_path: str) -> None:
         """Delete a folder and its contents."""
@@ -241,12 +263,7 @@ class Controller:
 
     def _refresh_exported_files_list(self):
         """Refresh the list of exported files in the settings area."""
-        exported_files = []
-        for subdir in self.export_dir.iterdir():
-            if subdir.is_dir():
-                for file in subdir.glob('*.txt'):
-                    exported_files.append((subdir.name, file.name))
-        self._view.update_exported_files_list(exported_files)
+        self._view.update_exported_files_list(self.current_export_files)
 
     def run(self) -> None:
         """Load chats and start the main event loop."""
