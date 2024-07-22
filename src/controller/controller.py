@@ -69,21 +69,29 @@ class Controller:
 
     def _run_export_process(self):
         displayed_chats = self._view.settings.get_displayed_chats()
+        logging.info(f"Starting export process for chats: {displayed_chats}")
 
         # Fetch messages for all displayed chats
         for chat_name in displayed_chats:
             chat = self._model.get_chat(chat_name)
             if chat:
+                logging.info(f"Fetching messages for chat: {chat_name}")
                 self._model.text_collector.read_messages(
                     chat.chat_identifier,
                     self._model.contacts_collector.contacts_cache
                 )
+            else:
+                logging.warning(f"Chat not found: {chat_name}")
 
         # Wait for conversations to be populated
-        self._wait_for_conversations(displayed_chats)
+        timeout = 120  # Increase timeout to 2 minutes
+        logging.info(f"Waiting for conversations to be populated (timeout: {timeout} seconds)")
+        self._wait_for_conversations(displayed_chats, timeout)
 
-        # After fetching messages, show the folder name input
+        # After fetching messages, show the folder name input and enable the save button
         self._view.after(0, self._view.settings.show_folder_name_input)
+        self._view.after(0, self._view.settings.enable_save_button)
+        logging.info("Export process completed")
 
     def _on_save_export(self, event=None) -> None:
         """Handle saving the exported chats."""
@@ -118,8 +126,9 @@ class Controller:
         # After export is complete, update the exported files list
         self._refresh_exported_files_list()
 
-        # Hide the folder name input
+        # Hide the folder name input and disable the save button
         self._view.after(0, self._view.settings.hide_folder_name_input)
+        self._view.after(0, self._view.settings.disable_save_button)
 
         # Display the first exported file
         if self.current_export_files:
@@ -232,7 +241,7 @@ class Controller:
             else:
                 print(f"File not found: {file_path}")
 
-    def _wait_for_conversations(self, chat_names: List[str], timeout: int = 60) -> None:
+    def _wait_for_conversations(self, chat_names: List[str], timeout: int = 120) -> None:
         """Wait for conversations to be populated in the conversations_selected folder."""
         start_time = time.time()
         conversations_folder = "./conversations_selected"
@@ -246,12 +255,18 @@ class Controller:
 
                 if not os.path.exists(chat_file):
                     all_conversations_ready = False
+                    logging.info(f"Waiting for file: {chat_file}")
                     break
+                else:
+                    logging.info(f"File ready: {chat_file}")
 
             if all_conversations_ready:
+                logging.info("All conversations are ready")
                 return
 
             time.sleep(1)  # Wait for 1 second before checking again
+
+        logging.warning(f"Timeout reached after {timeout} seconds. Some files may not be ready.")
 
     def _sanitize_folder_name(self, name: str) -> str:
         """Sanitize the folder name to match the one created by the text collector."""
@@ -266,12 +281,16 @@ class Controller:
         sanitized_name = self._sanitize_folder_name(chat.chat_name)
         source_file = Path("./conversations_selected") / sanitized_name / f"{sanitized_name}.txt"
 
+        logging.info(f"Attempting to export chat: {chat.chat_name}")
+        logging.info(f"Looking for source file: {source_file}")
+
         if source_file.exists():
             shutil.copy(source_file, chat_filepath)
             logging.info(f"Copied file from {source_file} to {chat_filepath}")
             return chat_filepath
         else:
             logging.warning(f"Source file not found: {source_file}")
+            logging.info(f"Contents of conversations_selected folder: {os.listdir('./conversations_selected')}")
             return None
 
     def _delete_folder(self, folder_path: str) -> None:

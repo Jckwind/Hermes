@@ -9,6 +9,7 @@ class Settings(ttk.Frame):
         self.view = view
         self.create_widgets()
         self.chat_cache = OrderedDict()
+        self.disable_save_button()  # Disable save button initially
 
     def create_widgets(self):
         """Create and arrange settings widgets."""
@@ -44,7 +45,7 @@ class Settings(ttk.Frame):
         self.folder_entry = ttk.Entry(self.folder_frame, textvariable=self.folder_name_var, style='Settings.TEntry')
         self.folder_entry.pack(fill='x')
 
-        self.save_button = ttk.Button(self.folder_frame, text="Save", style="Settings.TButton", command=self.on_save)
+        self.save_button = ttk.Button(self.folder_frame, text="Save", style="Settings.TButton", command=self.on_save, state="disabled")
         self.save_button.pack(pady=(10, 0), anchor='center')
 
         # Initially hide the folder name input
@@ -62,10 +63,19 @@ class Settings(ttk.Frame):
         """Handle save button click."""
         folder_name = self.folder_name_var.get()
         if folder_name:
+            self.disable_save_button()  # Disable button after clicking
             self.view.event_generate("<<SaveExport>>")
         else:
             # Show an error message if the folder name is empty
             self.view.show_error("Invalid Folder Name", "Please enter a valid folder name.")
+
+    def enable_save_button(self):
+        """Enable the save button."""
+        self.save_button.config(state="normal")
+
+    def disable_save_button(self):
+        """Disable the save button."""
+        self.save_button.config(state="disabled")
 
     def create_chat_view(self):
         """Create and configure the chat view widgets."""
