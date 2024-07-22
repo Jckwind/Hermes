@@ -48,17 +48,6 @@ class Settings(ttk.Frame):
         self.save_button = ttk.Button(self.folder_frame, text="Save", style="Settings.TButton", command=self.on_save, state="disabled")
         self.save_button.pack(pady=(10, 0), anchor='center')
 
-        # Initially hide the folder name input
-        self.folder_frame.pack_forget()
-
-    def show_folder_name_input(self):
-        """Show the folder name input section."""
-        self.folder_frame.pack(pady=10, padx=10, fill='x')
-
-    def hide_folder_name_input(self):
-        """Hide the folder name input section."""
-        self.folder_frame.pack_forget()
-
     def on_save(self):
         """Handle save button click."""
         folder_name = self.folder_name_var.get()

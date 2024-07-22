@@ -60,9 +60,6 @@ class Controller:
         """Handle export chats process."""
         self._view.after(0, self._view.chat_view.start_loading_animation)
 
-        # Show the folder name input in settings
-        self._view.settings.show_folder_name_input()
-
         # Run the export process in a separate thread
         export_thread = threading.Thread(target=self._run_export_process)
         export_thread.start()
@@ -88,8 +85,7 @@ class Controller:
         logging.info(f"Waiting for conversations to be populated (timeout: {timeout} seconds)")
         self._wait_for_conversations(displayed_chats, timeout)
 
-        # After fetching messages, show the folder name input and enable the save button
-        self._view.after(0, self._view.settings.show_folder_name_input)
+        # After fetching messages, enable the save button
         self._view.after(0, self._view.settings.enable_save_button)
         logging.info("Export process completed")
 
@@ -127,7 +123,6 @@ class Controller:
         self._refresh_exported_files_list()
 
         # Hide the folder name input and disable the save button
-        self._view.after(0, self._view.settings.hide_folder_name_input)
         self._view.after(0, self._view.settings.disable_save_button)
 
         # Display the first exported file
@@ -216,9 +211,6 @@ class Controller:
 
         # Clear the exported files list
         self._view.settings.clear_exported_files_list()
-
-        # Show the folder name input
-        self._view.settings.show_folder_name_input()
 
         # Clear the current export files
         self.current_export_files = []
