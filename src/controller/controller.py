@@ -183,17 +183,10 @@ class Controller:
         
         all_uploads_successful = True
         for file_path in directory.glob('*.txt'):
-            print(f"Uploading file: {file_path}")
             result = subprocess.run(["python", str(google_drive_upload_script), str(file_path)], capture_output=True, text=True)
             
             if result.returncode != 0:
-                print(f"Error uploading {file_path} to Google Drive:")
-                print(f"STDOUT: {result.stdout}")
-                print(f"STDERR: {result.stderr}")
                 all_uploads_successful = False
-            else:
-                print(f"Successfully uploaded {file_path}")
-                print(f"STDOUT: {result.stdout}")
 
         return all_uploads_successful
 
@@ -231,7 +224,7 @@ class Controller:
                     content = file.read()
                 self._view.chat_view.show_file_content(content)
             else:
-                print(f"File not found: {file_path}")
+                pass
 
     def _wait_for_conversations(self, chat_names: List[str], timeout: int = 120) -> None:
         """Wait for conversations to be populated in the conversations_selected folder."""
