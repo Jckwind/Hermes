@@ -19,13 +19,11 @@
 ## Overview
 Hermes is a powerful tool designed to securely extract and view iMessages from macOS devices. It provides a user-friendly interface for accessing and managing your iMessage data, ensuring privacy and ease of use.
 
-![Hermes Screenshot](path/to/screenshot.png)
-
 ## Features
 - **GUI Viewer**: Intuitive interface for browsing and searching messages
 - **Secure Extraction**: Safely extract iMessages from macOS devices
 - **Export Functionality**: Export conversations or selected messages
-- **Multi-device Support**: Compatible with iPhone and Mac synchronization
+
 
 ## Prerequisites
 - macOS device with iMessages enabled
@@ -103,41 +101,50 @@ Conda is an open-source package management and environment management system. It
    This should reflect the version installed via Homebrew or `pyenv`.
 
 7. **Run `run.sh`**:
-   To execute the `run.sh` script, which will install required Python packages and run the GUI application, follow these steps:
+   To execute the `run.sh` script, which will install required Python packages and run the GUI application:
 
-   - First, ensure that the script has execute permissions. Run the following command in your terminal:
+   - Ensure the script has execute permissions:
      ```
      chmod +x run.sh
      ```
 
-   - Now, you can run the script using the Python installed by Homebrew. Execute the script by typing:
+   - Run the script:
      ```
      ./run.sh
      ```
 
-   This will install all necessary Python packages specified in `requirements.txt` and then start the GUI application using the Python version installed via Homebrew.
+   This will install necessary Python packages from `requirements.txt` and start the GUI application.
 
 ## Usage
 1. **Launch the Application**:
-   Run the `gui.py` script from the `src` directory to start the Hermes application.
+   Run `./run.sh` from the terminal to start Hermes.
 
-2. **Select a Conversation**:
-   The left panel displays a list of your iMessage conversations. Click on a conversation to view its messages.
+2. **Select Conversations**:
+   In the left panel, click on conversations to add them to the processing list.
 
-3. **View Messages**:
-   The main panel shows the messages for the selected conversation. You can scroll through the messages and view their contents, including text, images, and attachments.
+3. **Export**:
+   Click the "Export" button when your list is complete. Name the subdirectory when prompted. Exports are saved to `Documents/exported_chats`.
 
-4. **Search Messages**:
-   Use the search bar at the top to search for specific keywords or phrases within the selected conversation. The messages will be filtered based on your search query.
+4. **Search**:
+   Use the search bar to find specific keywords or phrases within selected conversations.
 
-5. **Export Messages**:
-   To export messages from a conversation, click on the "Export" button. You can choose to export the entire conversation or select specific messages to export. The exported messages will be saved to a file in a chosen location.
+5. **Google Drive Export**:
+   To export to Google Drive, follow the instructions in `model/README.md`.
 
-6. **Dump Messages**:
-   The "Dump" feature allows you to save all messages from selected participants in a conversation to a separate file. Select the desired participants from the dropdown menu and click "Dump" to generate the file.
+6. **Quit**:
+   Close the application window to exit Hermes.
 
-7. **Quit the Application**:
-   To exit Hermes, simply close the application window or select "Quit" from the application menu.
+## License
+This project is open-source and available under the MIT License.
 
-## Project Structure
-The project is structured as follows:
+## Contributing
+- [Contributing](#contributing)
+
+## Troubleshooting
+- [Troubleshooting](#troubleshooting)
+
+## Changelog
+- [Changelog](#changelog)
+
+## Contact
+For support or inquiries, please contact gibbsngresge@gmail.com.

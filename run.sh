@@ -6,4 +6,4 @@ pip install -r requirements.txt
 
 # Run the GUI application
 echo "Running the GUI application..."
-python src/gui.py
+python src/main.py
