@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 from pathlib import Path
 import json
-import logging
 from ttkthemes import ThemedTk
 from typing import List, Dict, Any, Set
 from model.text_collection.chat import Chat
@@ -162,8 +161,8 @@ class View(ThemedTk):
                 with open(config_file, "r") as f:
                     data = json.load(f)
                     self.show_intro = data.get("show_intro", True)
-            except Exception as e:
-                logging.error(f"Error loading intro decision: {e}")
+            except Exception:
+                pass
 
     def show_introduction_window(self):
         """Display the introduction window using WelcomeMessage component."""

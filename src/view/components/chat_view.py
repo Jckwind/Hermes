@@ -135,3 +135,13 @@ class ChatView(ttk.Frame):
         """Reset the chat view."""
         self.clear()
         self.hide_file_content()
+
+    def show_export_complete_message(self):
+        """Display a message indicating that export is complete and user should name file or hit submit."""
+        self.clear()
+        center_x = self.canvas.winfo_width() // 2
+        center_y = self.canvas.winfo_height() // 2
+        self.canvas.create_text(center_x, center_y, 
+                                text="Export complete!\nPlease name file or hit submit.",
+                                fill="white", font=("Helvetica", 14, "bold"),
+                                justify=tk.CENTER)

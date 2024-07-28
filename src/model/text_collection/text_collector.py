@@ -1,7 +1,6 @@
 """Module for collecting and managing text messages from a SQLite database."""
 
 import sqlite3
-import logging
 import subprocess
 import os
 import shutil
@@ -27,8 +26,7 @@ class TextCollector:
         """Establish a connection to the SQLite database."""
         try:
             self.conn = sqlite3.connect(self.db_path)
-        except sqlite3.OperationalError as error:
-            logging.error("Failed to connect to the database at %s. Error: %s", self.db_path, error)
+        except sqlite3.OperationalError:
             raise
 
     def get_all_chat_ids_with_labels(self, contacts_cache: Dict[str, Contact]) -> List[Chat]:
@@ -39,8 +37,7 @@ class TextCollector:
                 enriched_chats = self._enrich_chats_with_contacts(chats, contacts_cache)
                 self.chat_cache = {chat.chat_name: chat for chat in enriched_chats}
             return list(self.chat_cache.values())
-        except sqlite3.Error as e:
-            self._log_database_error(e)
+        except sqlite3.Error:
             raise
 
     def _query_chats(self) -> List[Tuple[int, str, str]]:
@@ -85,8 +82,7 @@ class TextCollector:
         """Read messages for a specific chat."""
         try:
             self._fetch_messages_from_database(chat_identifier, contacts_cache)
-        except sqlite3.Error as e:
-            self._log_database_error(e)
+        except sqlite3.Error:
             raise
 
     def _fetch_messages_from_database(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
@@ -115,11 +111,8 @@ class TextCollector:
 
         result = output_queue.get()
         if result[0] == "success":
-            logging.info("imessage-exporter output: %s", result[1])
-            logging.debug("imessage-exporter stderr: %s", result[2])
             self._process_message_results(chat_identifier, contacts_cache)
         else:
-            logging.error("Error running imessage-exporter: %s", result[3])
             raise subprocess.CalledProcessError(result[1], command, result[2], result[3])
 
     def _process_message_results(self, chat_identifier: str, contacts_cache: Dict[str, Contact]) -> None:
@@ -155,7 +148,7 @@ class TextCollector:
         if os.path.exists(src_txt):
             shutil.move(src_txt, dst_txt)
         else:
-            logging.warning(f"Text file not found for chat: {chat_identifier}")
+            pass
 
         self._cleanup_dump_folder(output_path)
 
@@ -169,13 +162,8 @@ class TextCollector:
         """Delete the original ./dump folder after processing."""
         try:
             shutil.rmtree(output_path, ignore_errors=True)
-            logging.info(f"Cleaned up dump folder: {output_path}")
-        except Exception as e:
-            logging.error(f"Error cleaning up dump folder: {e}")
-
-    def _log_database_error(self, error: sqlite3.Error) -> None:
-        """Log database errors."""
-        logging.error("Database error occurred: %s", error)
+        except Exception:
+            pass
 
     def get_chat_members(self, chat_id: int, contacts_cache: Dict[str, Contact]) -> List[Contact]:
         """Get the members of a specific chat."""
@@ -192,8 +180,7 @@ class TextCollector:
                 members = cursor.fetchall()
 
             return [contacts_cache.get(member[0], Contact(phone_number=member[0], name=member[0])) for member in members]
-        except sqlite3.Error as e:
-            logging.error("Error getting chat members: %s", e)
+        except sqlite3.Error:
             raise
 
     def search_chats(self, search_term: str) -> List[Chat]:
@@ -211,7 +198,6 @@ class TextCollector:
                         old_file_path = os.path.join(folder_path, file_name)
                         new_file_path = os.path.join(folder_path, f"{folder_name}.txt")
                         os.rename(old_file_path, new_file_path)
-                        logging.info(f"Renamed {old_file_path} to {new_file_path}")
 
     def __del__(self):
         """Close the database connection when the object is destroyed."""

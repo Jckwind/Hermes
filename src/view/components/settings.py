@@ -50,13 +50,8 @@ class Settings(ttk.Frame):
 
     def on_save(self):
         """Handle save button click."""
-        folder_name = self.folder_name_var.get()
-        if folder_name:
-            self.disable_save_button()  # Disable button after clicking
-            self.view.event_generate("<<SaveExport>>")
-        else:
-            # Show an error message if the folder name is empty
-            self.view.show_error("Invalid Folder Name", "Please enter a valid folder name.")
+        self.disable_save_button()  # Disable button after clicking
+        self.view.event_generate("<<SaveExport>>")
 
     def enable_save_button(self):
         """Enable the save button."""
@@ -117,7 +112,6 @@ class Settings(ttk.Frame):
         """Handle submit button click."""
         # This method is a placeholder for future functionality
         folder_name = self.folder_name_var.get()
-        print(f"Submitted folder name: {folder_name}")
 
     def start_export(self):
         """Start the export process."""
@@ -174,3 +168,15 @@ class Settings(ttk.Frame):
                 self.exported_listbox.selection_set(i)
                 self.exported_listbox.see(i)
                 break
+
+    def on_export(self):
+        """Handle export button click."""
+        self.view.event_generate("<<StartExport>>")
+
+    def enable_export_button(self):
+        """Enable the export button."""
+        self.export_button.config(state="normal")
+
+    def disable_export_button(self):
+        """Disable the export button."""
+        self.export_button.config(state="disabled")
